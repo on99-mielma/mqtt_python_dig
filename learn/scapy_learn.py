@@ -494,6 +494,20 @@ def PUBCOMP_ONLY_TEST_0():
     )
     return package
 
+def PINGREQ_ONLY_TEST_0():
+    package = AUTO_MQTT_HEAD(mqtt_type=12)
+    logging.debug(
+        msg=f'PINGREQ PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
+
+def PINGRESP_ONLY_TEST_0():
+    package = AUTO_MQTT_HEAD(mqtt_type=13)
+    logging.debug(
+        msg=f'PINGRESP PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
+
 
 def DISCONNECT_ONLY_TEST_0():
     # easy mode
@@ -537,6 +551,66 @@ def send_scenarii(packets, ip):
     ss.close()
 
 
+def GEN_RANDOM_PACKAGE():
+    ERR_MESSAGE = {
+        0: 'NUMBER ERROR'
+    }
+    CONTROL_PACKET_TYPE = {
+        1: 'CONNECT',
+        2: 'CONNACK',
+        3: 'PUBLISH',
+        4: 'PUBACK',
+        5: 'PUBREC',
+        6: 'PUBREL',
+        7: 'PUBCOMP',
+        8: 'SUBSCRIBE',
+        9: 'SUBACK',
+        10: 'UNSUBSCRIBE',
+        11: 'UNSUBACK',
+        12: 'PINGREQ',
+        13: 'PINGRESP',
+        14: 'DISCONNECT',
+        15: 'AUTH'  # Added in v5.0
+    }
+    number = random.randint(0, 150) % 15 + 1
+    if number == 1:
+        return build_mqtt_connect_packet_only(randomIP.RANDOM_NAME(suffix='MQTT_'))
+    elif number == 2:
+        return CONEECTACK_ONLY_TEST_0()
+    elif number == 3:
+        return PUBLISH_ONLY_TEST_0(topic=randomIP.RANDOM_NAME(suffix='python/', randomLen=random.randint(1, 10)),
+                                   value=randomIP.RANDOM_NAME(randomLen=random.randint(10, 20)))
+    elif number == 4:
+        return PUBACK_ONLY_TEST_0()
+    elif number == 5:
+        return PUBREC_ONLY_TEST_0()
+    elif number == 6:
+        return PUBREL_ONLY_TEST_0()
+    elif number == 7:
+        return PUBCOMP_ONLY_TEST_0()
+    elif number == 8:
+        return SUBSCRIBE_ONLY_TEST_0()
+    elif number == 9:
+        return SUBACK_ONLY_TEST_0()
+    elif number == 10:
+        return UNSUBSCRIBE_ONLY_TEST_0()
+    elif number == 11:
+        return UNSUBACK_ONLY_TEST_0()
+    elif number == 12:
+        return PINGREQ_ONLY_TEST_0()
+    elif number == 13:
+        return PINGRESP_ONLY_TEST_0()
+    elif number == 14:
+        return DISCONNECT_ONLY_TEST_1()
+    elif number == 15:
+        """
+        TODO
+        """
+        return CONTROL_PACKET_TYPE.get(15)
+    else:
+        raise Exception(ERR_MESSAGE.get(0))
+
+
 def CONNECT_ATTACK_EMU_1():
     """
     good
@@ -576,6 +650,16 @@ def CONNECT_ATTACK_EMU_1():
                 DISCONNECT_ONLY_TEST_1(),
                 DISCONNECT_ONLY_TEST_1(),
                 DISCONNECT_ONLY_TEST_1(),
+                PINGREQ_ONLY_TEST_0(),
+                PINGRESP_ONLY_TEST_0(),
+                PINGREQ_ONLY_TEST_0(),
+                PINGRESP_ONLY_TEST_0(),
+                PINGREQ_ONLY_TEST_0(),
+                PINGRESP_ONLY_TEST_0(),
+                PINGREQ_ONLY_TEST_0(),
+                PINGRESP_ONLY_TEST_0(),
+                PINGREQ_ONLY_TEST_0(),
+                PINGRESP_ONLY_TEST_0(),
             ],
             temp_target_ip)
 
