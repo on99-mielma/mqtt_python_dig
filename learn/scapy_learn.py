@@ -83,7 +83,7 @@ def build_mqtt_connect_packet_only(client_id):
         clientIdlen=RawVal(diy)
     )
     logging.debug(
-        msg=f'CONNECT PACKET BUILD <{packet}>'
+        msg=f'CONNECT PACKET BUILD <{packet}> -<{packet.fields}>'
     )
     # print('*' * 100)
     # packet.show()
@@ -494,12 +494,14 @@ def PUBCOMP_ONLY_TEST_0():
     )
     return package
 
+
 def PINGREQ_ONLY_TEST_0():
     package = AUTO_MQTT_HEAD(mqtt_type=12)
     logging.debug(
         msg=f'PINGREQ PACKET BUILD <{package}> - <{package.fields}>'
     )
     return package
+
 
 def PINGRESP_ONLY_TEST_0():
     package = AUTO_MQTT_HEAD(mqtt_type=13)
@@ -525,9 +527,36 @@ def DISCONNECT_ONLY_TEST_1():
     return package
 
 
+def AUTH_ONLY_TEST_0():
+    """
+
+    RETCODE::
+    0x00 成功 由服务端发送 /
+    0x18 继续认证 由服务端或者客户端发送 /
+    0x19 重新认证 由客户端发送
+
+    Properties::
+    0x15 认证方法(Authentication Method)标识符-
+    跟随其后的是一个UTF-8编码字符串，包含认证方法名称。省略认证方法或者包含多个认证方法都将造成协议错误(Protocol Error)。
+    0x16 认证数据(Authentication Data)标识符。
+    跟随其后的是二进制数据，包含认证数据。包含多个认证数据将造成协议错误(Protocol Error)。此数据的内容由认证方法定义。
+    0x31 原因字符串(Reason String)标识符。
+    跟随其后的是UTF-8编码字符串，表示断开原因。此原因字符串是为诊断而设计的可读字符串，不应该被接收端所解析。如果加上原因字符串之后的AUTH报文长度超出了接收端所指定的最大报文长度，则发送端不能发送此属性。包含多个原因字符串将造成协议错误(Protocol Error)。
+    0x38 用户属性(User Property)标识符
+    跟随其后的是UTF-8字符串键值对。此属性可用于向客户端提供包括诊断信息在内的附加信息。如果加上用户属性之后的AUTH报文长度超出了接收端指定的最大报文长度，则服务端不能发送此属性。用户属性(User Property)允许出现多次，以表示多个名字/值对，且相同的名字可以多次出现。
+    :return:
+    """
+    retcode = bytes([0x00])
+    package = AUTO_MQTT_HEAD(mqtt_type=15) / retcode
+    logging.debug(
+        msg=f'PUBCOMP PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
+
+
 def create_socket(ip):
     s = socket.socket()
-    print(ip)
+    logging.debug(msg=f'DESTINATION IS <{ip}>')
     s.connect((ip, 1883))
     ss = StreamSocket(s, Raw)
     return ss
@@ -539,15 +568,20 @@ def send_scenarii(packets, ip):
 
     # Senfind packet for each scenario
     for packet in packets:
-        print('Send packet type: ', packet.type)
+        logging.debug(
+            msg=f'Send packet type: {packet.type}'
+        )
         if packet.type == 1:
-            print('****', packet.protolevel)
+            logging.debug(
+                msg=f'PROTOLEVEL <{packet.protolevel}>'
+            )
             ss.sr1(packet)
         else:
             ss.send(packet)
 
     # Stopping connection
-    print("END")
+    # print("END")
+    logging.debug(msg='SEND END')
     ss.close()
 
 
@@ -646,20 +680,10 @@ def CONNECT_ATTACK_EMU_1():
                 DISCONNECT_ONLY_TEST_1(),
                 DISCONNECT_ONLY_TEST_1(),
                 DISCONNECT_ONLY_TEST_1(),
-                DISCONNECT_ONLY_TEST_1(),
-                DISCONNECT_ONLY_TEST_1(),
-                DISCONNECT_ONLY_TEST_1(),
-                DISCONNECT_ONLY_TEST_1(),
-                PINGREQ_ONLY_TEST_0(),
-                PINGRESP_ONLY_TEST_0(),
-                PINGREQ_ONLY_TEST_0(),
-                PINGRESP_ONLY_TEST_0(),
-                PINGREQ_ONLY_TEST_0(),
-                PINGRESP_ONLY_TEST_0(),
-                PINGREQ_ONLY_TEST_0(),
-                PINGRESP_ONLY_TEST_0(),
-                PINGREQ_ONLY_TEST_0(),
-                PINGRESP_ONLY_TEST_0(),
+                AUTH_ONLY_TEST_0(),
+                AUTH_ONLY_TEST_0(),
+                AUTH_ONLY_TEST_0(),
+                AUTH_ONLY_TEST_0(),
             ],
             temp_target_ip)
 
