@@ -4,6 +4,12 @@ from scapy.layers.inet import IP, TCP
 from scapy.all import *
 import random
 import randomIP
+import logging
+
+logging.basicConfig(
+    level=logging.NOTSET,
+    format='%(asctime)s - %(levelname)s - %(name)s - %(message)s'
+)
 
 destination = '192.168.31.244'
 source = '192.168.31.233'
@@ -76,9 +82,12 @@ def build_mqtt_connect_packet_only(client_id):
         clientId=client_id,
         clientIdlen=RawVal(diy)
     )
-    print('*' * 100)
-    packet.show()
-    print('*' * 100)
+    logging.debug(
+        msg=f'CONNECT PACKET BUILD <{packet}>'
+    )
+    # print('*' * 100)
+    # packet.show()
+    # print('*' * 100)
     return packet
 
 
@@ -165,9 +174,12 @@ def PUBLISH_ONLY_TEST_0(topic, value):
     # 发送MQTT publish消息
     package = mqtt / MQTTPublish(topic=topic,
                                  value=chr(0) + value)
-    print('*' * 100)
-    package.show()
-    print('*' * 100)
+    # print('*' * 100)
+    # package.show()
+    # print('*' * 100)
+    logging.debug(
+        msg=f'PUBLISH PACKET BUILD <{package}> - <{package.fields}>'
+    )
     return package
 
 
@@ -201,10 +213,21 @@ def AUTO_MQTT_HEAD(mqtt_type=0):
                             QOS=qos,
                             RETAIN=retain,
                             len=None)
+    logging.debug(
+        msg=f'MQTT HEAD PACKET BUILD <{mqtt_head_packet}> - <{mqtt_head_packet.fields}>'
+    )
     return mqtt_head_packet
 
 
 def Topic_Suffix(retain_handling=0, retain_as_published=0, no_local=0, qos=0):
+    """
+    字段检查
+    :param retain_handling:
+    :param retain_as_published:
+    :param no_local:
+    :param qos:
+    :return:
+    """
     if not (0 <= retain_handling <= 3):
         raise Exception('Check 0<=retain_handling<=3')
     if not (0 <= retain_as_published <= 1):
@@ -222,6 +245,12 @@ def Topic_Suffix(retain_handling=0, retain_as_published=0, no_local=0, qos=0):
 
 
 def Fresh_Topic(topics: List[str], mqtt_type=8):
+    """
+    报文间隔符修正
+    :param topics:
+    :param mqtt_type:
+    :return:
+    """
     n = len(topics)
     index1 = 0
     while index1 < n:
@@ -247,7 +276,11 @@ def SUBSCRIBE_ONLY_TEST_0(topics=None):
         topics = ['#']
     msgid = random.randint(1, 65533)
     topics = Fresh_Topic(topics, mqtt_type=8)
-    return AUTO_MQTT_HEAD(mqtt_type=8) / MQTTSubscribe(msgid=msgid, topics=topics)
+    package = AUTO_MQTT_HEAD(mqtt_type=8) / MQTTSubscribe(msgid=msgid, topics=topics)
+    logging.debug(
+        msg=f'SUBSCRIBE PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
 
 
 def UNSUBSCRIBE_ONLY_TEST_0(topics=None):
@@ -255,7 +288,11 @@ def UNSUBSCRIBE_ONLY_TEST_0(topics=None):
         topics = ['#']
     topics = Fresh_Topic(topics, mqtt_type=10)
     msgid = random.randint(1, 65533)
-    return AUTO_MQTT_HEAD(mqtt_type=10) / MQTTUnsubscribe(msgid=msgid, topics=topics)
+    package = AUTO_MQTT_HEAD(mqtt_type=10) / MQTTUnsubscribe(msgid=msgid, topics=topics)
+    logging.debug(
+        msg=f'UNSUBSCRIBE PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
 
 
 def CONEECTACK_ONLY_TEST_0():
@@ -271,7 +308,7 @@ def CONEECTACK_ONLY_TEST_0():
     6-255		保留
     :return:
     """
-    length = 16
+    # length = 16
     ID_Maximum_Packet_Size = 0x27
     ID_Maximum_Packet_Size_Value = random.randint(0x0fffffff, 0xffffffff)
 
@@ -396,39 +433,66 @@ def CONEECTACK_ONLY_TEST_0():
            UNION_ID_Subscription_Identifier_Available() + \
            UNION_ID_Topic_Alias_Maximum() + \
            UNION_ID_Wildcard_Subscription_Available()
-
-    return AUTO_MQTT_HEAD(mqtt_type=2) / MQTTConnack(sessPresentFlag=1, retcode=0) / Raw(bytes([len(nums)] + nums))
+    package = AUTO_MQTT_HEAD(mqtt_type=2) / MQTTConnack(sessPresentFlag=1, retcode=0) / Raw(bytes([len(nums)] + nums))
+    logging.debug(
+        msg=f'CONEECTACK PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
 
 
 def PUBACK_ONLY_TEST_0():
     msgid = random.randint(1, 65533)
-    return AUTO_MQTT_HEAD(mqtt_type=4) / MQTTPuback(msgid=msgid)
+    package = AUTO_MQTT_HEAD(mqtt_type=4) / MQTTPuback(msgid=msgid)
+    logging.debug(
+        msg=f'PUBACK PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
 
 
 def SUBACK_ONLY_TEST_0():
     msgid = random.randint(1, 65533)
-    return AUTO_MQTT_HEAD(mqtt_type=9) / MQTTSuback(msgid=msgid, retcode=0)
+    package = AUTO_MQTT_HEAD(mqtt_type=9) / MQTTSuback(msgid=msgid, retcode=0)
+    logging.debug(
+        msg=f'PUBACK PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
 
 
 def UNSUBACK_ONLY_TEST_0():
     msgid = random.randint(1, 65533)
     retcode = 0x00
-    return AUTO_MQTT_HEAD(mqtt_type=11) / MQTTUnsuback(msgid=msgid) / Raw(bytes([retcode]))
+    package = AUTO_MQTT_HEAD(mqtt_type=11) / MQTTUnsuback(msgid=msgid) / Raw(bytes([retcode]))
+    logging.debug(
+        msg=f'UNSUBACK PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
 
 
 def PUBREC_ONLY_TEST_0():
     msgid = random.randint(1, 65533)
-    return AUTO_MQTT_HEAD(mqtt_type=5) / MQTTPubrec(msgid=msgid)
+    package = AUTO_MQTT_HEAD(mqtt_type=5) / MQTTPubrec(msgid=msgid)
+    logging.debug(
+        msg=f'PUBREC PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
 
 
 def PUBREL_ONLY_TEST_0():
     msgid = random.randint(1, 65533)
-    return AUTO_MQTT_HEAD(mqtt_type=6) / MQTTPubrel(msgid=msgid)
+    package = AUTO_MQTT_HEAD(mqtt_type=6) / MQTTPubrel(msgid=msgid)
+    logging.debug(
+        msg=f'PUBREL PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
 
 
 def PUBCOMP_ONLY_TEST_0():
     msgid = random.randint(1, 65533)
-    return AUTO_MQTT_HEAD(mqtt_type=7) / MQTTPubcomp(msgid=msgid)
+    package = AUTO_MQTT_HEAD(mqtt_type=7) / MQTTPubcomp(msgid=msgid)
+    logging.debug(
+        msg=f'PUBCOMP PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
 
 
 def DISCONNECT_ONLY_TEST_0():
@@ -440,7 +504,11 @@ def DISCONNECT_ONLY_TEST_1():
     # hard core
     # Reason Code: Normal disconnection (0) # retcode < 1 only 0
     nums = [0x00, 0x00]
-    return AUTO_MQTT_HEAD(mqtt_type=14) / MQTTDisconnect() / Raw(bytes(nums))
+    package = AUTO_MQTT_HEAD(mqtt_type=14) / MQTTDisconnect() / Raw(bytes(nums))
+    logging.debug(
+        msg=f'PUBCOMP PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
 
 
 def create_socket(ip):
@@ -474,7 +542,12 @@ def CONNECT_ATTACK_EMU_1():
     good
     :return:
     """
+    round = 0
     while True:
+        round += 1
+        logging.debug(
+            msg=f'ATTACK ROUND {round} START!'
+        )
         temp_client_id = randomIP.RANDOM_NAME(suffix='MQTT_')
         temp_target_ip = '192.168.31.244'
         temp_target_port = 1883

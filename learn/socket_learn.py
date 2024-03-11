@@ -21,6 +21,8 @@ from scapy.all import *
 from scapy.contrib.mqtt import MQTT, MQTTConnect, MQTTPublish
 from scapy.layers.inet import IP, TCP
 
+
+
 # 建立TCP连接
 target_ip = "192.168.31.244"
 client_id = "socket_scapy_test"
