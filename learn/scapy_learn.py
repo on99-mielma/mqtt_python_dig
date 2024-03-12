@@ -18,6 +18,24 @@ topic = "python/shit"
 # topic = "test0"
 mac_addr = '00:0c:29:33:ec:cb'
 
+CONTROL_PACKET_TYPE = {
+    1: 'CONNECT',
+    2: 'CONNACK',
+    3: 'PUBLISH',
+    4: 'PUBACK',
+    5: 'PUBREC',
+    6: 'PUBREL',
+    7: 'PUBCOMP',
+    8: 'SUBSCRIBE',
+    9: 'SUBACK',
+    10: 'UNSUBSCRIBE',
+    11: 'UNSUBACK',
+    12: 'PINGREQ',
+    13: 'PINGRESP',
+    14: 'DISCONNECT',
+    15: 'AUTH'  # Added in v5.0
+}
+
 
 # arp_entry = ARP(pdst=destination,hwdst=mac_addr)
 # arp_entry.op = 2
@@ -89,6 +107,219 @@ def build_mqtt_connect_packet_only(client_id):
     # packet.show()
     # print('*' * 100)
     return packet
+
+
+def CONNECT_ONLY_TEST_0(
+        protoname='MQTT',
+        usernameflag=0,
+        passwordflag=0,
+        willretainflag=0,
+        willQOSflag=0,
+        willflag=0,
+        cleansess=1,
+        reserved=0,
+        klive=60,
+        clientId='None',
+        willtopic='None',
+        willmsg='None',
+        username='None',
+        password='None',
+        Session_Expiry_Interval_Value=65400,
+        Receive_Maximum_Value=65400,
+        Maximum_Packet_Size_Value=65400,
+        Topic_Alias_Maximum_Value=65400,
+        Will_Delay_Interval_flag=0,
+        Will_Delay_Interval_Value=30,
+        Payload_Format_Indicator=0,
+        Publication_Expiry_Interval_flag=0,
+        Publication_Expiry_Interval_Value=300,
+        Content_Type_Value='',
+        Response_Topic_Value='',
+        Correlation_Data_flag=0,
+        Correlation_Data_Value='',
+):
+    """
+    Make For MQTTv5.0
+    :param protoname:
+    :param usernameflag:
+    :param passwordflag:
+    :param willretainflag:
+    :param willQOSflag:
+    :param willflag:
+    :param cleansess:
+    :param reserved:
+    :param klive:
+    :param clientId:
+    :param willtopic:
+    :param willmsg:
+    :param username:
+    :param password:
+    :param Session_Expiry_Interval_Value:
+    :param Receive_Maximum_Value:
+    :param Maximum_Packet_Size_Value:
+    :param Topic_Alias_Maximum_Value:
+    :param Will_Delay_Interval_flag:
+    :param Will_Delay_Interval_Value:
+    :param Payload_Format_Indicator:
+    :param Publication_Expiry_Interval_flag:
+    :param Publication_Expiry_Interval_Value:
+    :param Content_Type_Value:
+    :param Response_Topic_Value:
+    :param Correlation_Data_flag:
+    :param Correlation_Data_Value:
+    :return:
+    """
+    properties = b''
+    properties_length = 0
+    if cleansess == 1:
+        # SET Session_Expiry_Interval
+        sign = 0x11
+        before_bytes = [
+            sign,
+            (Session_Expiry_Interval_Value >> 24) & 0xff,
+            (Session_Expiry_Interval_Value >> 16) & 0xff,
+            (Session_Expiry_Interval_Value >> 8) & 0xff,
+            Session_Expiry_Interval_Value & 0xff,
+        ]
+        properties_length += len(before_bytes)
+        properties += bytes(before_bytes)
+
+    # SET Receive_Maximum
+    receive_maximum_sign = 0x21
+    rm_bb = [
+        receive_maximum_sign,
+        (Receive_Maximum_Value >> 8) & 0xff,
+        Receive_Maximum_Value & 0xff,
+    ]
+    properties_length += len(rm_bb)
+    properties += bytes(rm_bb)
+
+    # SET Maximum_Packet_Size
+    Maximum_Packet_Size_SIGN = 0x27
+    mp_bb = [
+        Maximum_Packet_Size_SIGN,
+        (Maximum_Packet_Size_Value >> 24) & 0xff,
+        (Maximum_Packet_Size_Value >> 16) & 0xff,
+        (Maximum_Packet_Size_Value >> 8) & 0xff,
+        Maximum_Packet_Size_Value & 0xff,
+    ]
+    properties_length += len(mp_bb)
+    properties += bytes(mp_bb)
+
+    # SET TOPIC ALIAS MAXIMUM
+    Topic_Alias_Maximum_SIGN = 0x22
+    tam_bb = [
+        Topic_Alias_Maximum_SIGN,
+        (Topic_Alias_Maximum_Value >> 8) & 0xff,
+        Topic_Alias_Maximum_Value & 0xff,
+    ]
+    properties_length += len(tam_bb)
+    properties += bytes(tam_bb)
+
+    toRaw = bytes([properties_length]) + properties + bytes([(len(clientId) >> 8) & 0xff, len(clientId) & 0xff])
+
+    # WILL SETTING
+    """
+    Will Flag 通常是 MQTT 协议实现方关心的字段，它用于标识 CONNECT 报文中是否会包含 Will Properties、Will Topic 等字段。
+    
+    Will Retain 的使用场景，它是保留消息与遗嘱消息的结合。如果订阅该遗嘱主题（Will Topic）的客户端不能保证遗嘱消息发布时在线，那么建议为遗嘱消息设置 Will Retain，避免订阅端错过遗嘱消息。
+    
+    Will Properties 中的消息过期间隔（Message Expiry Interval）等属性与 PUBLISH 报文中的用法基本一致，只有一个遗嘱延迟间隔（Will Delay Interval）是遗嘱消息特有的属性。
+    """
+
+    will_length = 0
+    will_properties = b''
+    if willflag == 1:
+        if Will_Delay_Interval_flag == 1:
+            wdi_sign = 0x18
+            wdi_bb = [
+                wdi_sign,
+                (Will_Delay_Interval_Value >> 24) & 0xff,
+                (Will_Delay_Interval_Value >> 16) & 0xff,
+                (Will_Delay_Interval_Value >> 8) & 0xff,
+                (Will_Delay_Interval_Value >> 0) & 0xff,
+            ]
+            will_length += len(wdi_bb)
+            will_properties += bytes(wdi_bb)
+
+        pfi_sign = 0x01
+        pfi_bb = [
+            pfi_sign,
+            Payload_Format_Indicator % 2
+        ]
+        will_length += len(pfi_bb)
+        will_properties += bytes(pfi_bb)
+
+        if Publication_Expiry_Interval_flag == 1:
+            pei_sign = 0x02
+            pei_bb = [
+                pei_sign,
+                (Publication_Expiry_Interval_Value >> 24) & 0xff,
+                (Publication_Expiry_Interval_Value >> 16) & 0xff,
+                (Publication_Expiry_Interval_Value >> 8) & 0xff,
+                (Publication_Expiry_Interval_Value >> 0) & 0xff,
+            ]
+            will_length += len(pei_bb)
+            will_properties += bytes(pei_bb)
+
+        ct_sign = 0x03
+        ct_utf8 = Content_Type_Value.encode('utf-8')
+        ct_bb = [
+            ct_sign,
+            (len(ct_utf8) >> 8) & 0xff,
+            (len(ct_utf8) >> 0) & 0xff,
+        ]
+        will_length += (len(ct_bb) + len(ct_utf8))
+        will_properties += bytes(ct_bb)
+        will_properties += ct_utf8
+
+        rt_sign = 0x08
+        rt_utf8 = Response_Topic_Value.encode('utf-8')
+        rt_bb = [
+            rt_sign,
+            (len(rt_utf8) >> 8) & 0xff,
+            (len(rt_utf8) >> 0) & 0xff,
+        ]
+        will_length += (len(rt_bb) + len(rt_utf8))
+        will_properties += bytes(rt_bb)
+        will_properties += rt_utf8
+
+        if Correlation_Data_flag == 1:
+            cd_sign = 0x09
+            cd_utf8 = Correlation_Data_Value.encode('utf-8')
+            cd_bb = [
+                cd_sign,
+                (len(cd_utf8) >> 8) & 0xff,
+                (len(cd_utf8) >> 0) & 0xff,
+            ]
+            will_length += (len(cd_bb) + len(cd_utf8))
+            will_properties += bytes(cd_bb)
+            will_properties += cd_utf8
+
+    will_to_raw = bytes([will_length]) + will_properties + bytes([(len(willtopic) >> 8) & 0xff, len(willtopic) & 0xff])
+
+    package = AUTO_MQTT_HEAD(mqtt_type=1) / MQTTConnect(
+        protoname=protoname,
+        usernameflag=usernameflag,
+        passwordflag=passwordflag,
+        willretainflag=willretainflag,
+        willQOSflag=willQOSflag,
+        willflag=willflag,
+        cleansess=cleansess,
+        reserved=reserved,
+        klive=klive,
+        clientId=clientId,
+        clientIdlen=RawVal(toRaw),  # properties 关键插入位置
+        wtoplen=RawVal(will_to_raw),  # WILL SETTING 关键插入位置
+        willtopic=willtopic,
+        willmsg=willmsg,
+        username=username,
+        password=password
+    )
+    logging.debug(
+        msg=f'CONNECT PACKET BUILD <{package}> - <{package.fields}>'
+    )
+    return package
 
 
 # 发送MQTT报文
@@ -315,9 +546,9 @@ def CONEECTACK_ONLY_TEST_0():
     def UNION_ID_Maximum_Packet_Size():
         return [
             ID_Maximum_Packet_Size,
-            (ID_Maximum_Packet_Size_Value >> 6) & 0xff,
-            (ID_Maximum_Packet_Size_Value >> 4) & 0xff,
-            (ID_Maximum_Packet_Size_Value >> 2) & 0xff,
+            (ID_Maximum_Packet_Size_Value >> 24) & 0xff,
+            (ID_Maximum_Packet_Size_Value >> 16) & 0xff,
+            (ID_Maximum_Packet_Size_Value >> 8) & 0xff,
             ID_Maximum_Packet_Size_Value & 0xff,
         ]
 
@@ -354,7 +585,7 @@ def CONEECTACK_ONLY_TEST_0():
     def UNION_ID_Topic_Alias_Maximum():
         return [
             ID_Topic_Alias_Maximum,
-            (ID_Topic_Alias_Maximum_Value >> 2) & 0xff,
+            (ID_Topic_Alias_Maximum_Value >> 8) & 0xff,
             (ID_Topic_Alias_Maximum_Value >> 0) & 0xff,
         ]
 
@@ -373,7 +604,7 @@ def CONEECTACK_ONLY_TEST_0():
     def UNION_ID_Topic_Alias():
         return [
             ID_Topic_Alias,
-            (ID_Topic_Alias_Value >> 2) & 0xff,
+            (ID_Topic_Alias_Value >> 8) & 0xff,
             (ID_Topic_Alias_Value >> 0) & 0xff,
         ]
 
@@ -392,7 +623,7 @@ def CONEECTACK_ONLY_TEST_0():
     def UNION_ID_User_Property():
         return [
             ID_User_Property,
-            (ID_User_Property_Value >> 2) & 0xff,
+            (ID_User_Property_Value >> 8) & 0xff,
             (ID_User_Property_Value >> 0) & 0xff,
         ]
 
@@ -402,7 +633,7 @@ def CONEECTACK_ONLY_TEST_0():
     def UNION_ID_Receive_Maximum():
         return [
             ID_Receive_Maximum,
-            (ID_Receive_Maximum_Value >> 2) & 0xff,
+            (ID_Receive_Maximum_Value >> 8) & 0xff,
             (ID_Receive_Maximum_Value >> 0) & 0xff,
         ]
 
@@ -421,9 +652,9 @@ def CONEECTACK_ONLY_TEST_0():
     def UNION_ID_Publication_Expiry_Interval():
         return [
             ID_Publication_Expiry_Interval,
-            (ID_Publication_Expiry_Interval_Value >> 6) & 0xff,
-            (ID_Publication_Expiry_Interval_Value >> 4) & 0xff,
-            (ID_Publication_Expiry_Interval_Value >> 2) & 0xff,
+            (ID_Publication_Expiry_Interval_Value >> 24) & 0xff,
+            (ID_Publication_Expiry_Interval_Value >> 16) & 0xff,
+            (ID_Publication_Expiry_Interval_Value >> 8) & 0xff,
             ID_Publication_Expiry_Interval_Value & 0xff,
         ]
 
@@ -527,7 +758,16 @@ def DISCONNECT_ONLY_TEST_1():
     return package
 
 
-def AUTH_ONLY_TEST_0():
+def AUTH_ONLY_TEST_0(
+        AM_SET=False,
+        AM_VALUE='None',
+        AD_SET=False,
+        AD_DATA='None',
+        RS_SET=False,
+        RS_DATA='None',
+        UP_SET=False,
+        UP_DATA='None'
+):
     """
 
     RETCODE::
@@ -548,6 +788,64 @@ def AUTH_ONLY_TEST_0():
     """
     retcode = bytes([0x00])
     package = AUTO_MQTT_HEAD(mqtt_type=15) / retcode
+
+    def SET_Authentication_Method(Authentication_Method_Name: str):
+        toUTF8 = Authentication_Method_Name.encode('utf-8')
+        beforeBYTES = [
+            0x15,
+            (len(Authentication_Method_Name) >> 8) & 0xff,
+            len(Authentication_Method_Name) & 0xff,
+        ]
+        return (len(beforeBYTES) + len(toUTF8)), bytes(beforeBYTES) + toUTF8
+
+    def SET_Authentication_Data(Authentication_Data_Value: str):
+        toUTF8 = Authentication_Data_Value.encode('utf-8')
+        beforeBYTES = [
+            0x16,
+            (len(Authentication_Data_Value) >> 8) & 0xff,
+            len(Authentication_Data_Value) & 0xff,
+        ]
+        return (len(beforeBYTES) + len(toUTF8)), bytes(beforeBYTES) + toUTF8
+
+    def SET_Reason_String(Reason_String_Value: str):
+        toUTF8 = Reason_String_Value.encode('utf-8')
+        beforeBYTES = [
+            0x1f,
+            (len(Reason_String_Value) >> 8) & 0xff,
+            len(Reason_String_Value) & 0xff,
+        ]
+        return (len(beforeBYTES) + len(toUTF8)), bytes(beforeBYTES) + toUTF8
+
+    def SET_User_Property(User_Property_Value: str):
+        toUTF8 = User_Property_Value.encode('utf-8')
+        beforeBYTES = [
+            0x26,
+            (len(User_Property_Value) >> 8) & 0xff,
+            len(User_Property_Value) & 0xff,
+        ]
+        return (len(beforeBYTES) + len(toUTF8)), bytes(beforeBYTES) + toUTF8
+
+    length = 0
+    final_byte_stream = b''
+    if AM_SET:
+        length_tmp, package_tmp = SET_Authentication_Method(AM_VALUE)
+        length += length_tmp
+        final_byte_stream += package_tmp
+    if AD_SET:
+        length_tmp, package_tmp = SET_Authentication_Method(AD_DATA)
+        length += length_tmp
+        final_byte_stream += package_tmp
+    if RS_SET:
+        length_tmp, package_tmp = SET_Reason_String(RS_DATA)
+        length += length_tmp
+        final_byte_stream += package_tmp
+    if UP_SET:
+        length_tmp, package_tmp = SET_User_Property(UP_DATA)
+        length += length_tmp
+        final_byte_stream += package_tmp
+
+    package = package / chr(length) / final_byte_stream
+
     logging.debug(
         msg=f'PUBCOMP PACKET BUILD <{package}> - <{package.fields}>'
     )
@@ -589,26 +887,11 @@ def GEN_RANDOM_PACKAGE():
     ERR_MESSAGE = {
         0: 'NUMBER ERROR'
     }
-    CONTROL_PACKET_TYPE = {
-        1: 'CONNECT',
-        2: 'CONNACK',
-        3: 'PUBLISH',
-        4: 'PUBACK',
-        5: 'PUBREC',
-        6: 'PUBREL',
-        7: 'PUBCOMP',
-        8: 'SUBSCRIBE',
-        9: 'SUBACK',
-        10: 'UNSUBSCRIBE',
-        11: 'UNSUBACK',
-        12: 'PINGREQ',
-        13: 'PINGRESP',
-        14: 'DISCONNECT',
-        15: 'AUTH'  # Added in v5.0
-    }
     number = random.randint(0, 150) % 15 + 1
     if number == 1:
-        return build_mqtt_connect_packet_only(randomIP.RANDOM_NAME(suffix='MQTT_'))
+        # return build_mqtt_connect_packet_only(randomIP.RANDOM_NAME(suffix='MQTT_'))
+        CONNECT_ONLY_TEST_0(clientId=randomIP.RANDOM_NAME(suffix='MQTT_'), willflag=1, willretainflag=1, usernameflag=1,
+                            passwordflag=1)
     elif number == 2:
         return CONEECTACK_ONLY_TEST_0()
     elif number == 3:
@@ -637,10 +920,7 @@ def GEN_RANDOM_PACKAGE():
     elif number == 14:
         return DISCONNECT_ONLY_TEST_1()
     elif number == 15:
-        """
-        TODO
-        """
-        return CONTROL_PACKET_TYPE.get(15)
+        return AUTH_ONLY_TEST_0()
     else:
         raise Exception(ERR_MESSAGE.get(0))
 
@@ -666,7 +946,20 @@ def CONNECT_ATTACK_EMU_1():
 
         send_scenarii(
             [
-                build_mqtt_connect_packet_only(temp_client_id),
+                # build_mqtt_connect_packet_only(temp_client_id),
+                CONNECT_ONLY_TEST_0(clientId=temp_client_id,
+                                    willflag=1,
+                                    willretainflag=1,
+                                    usernameflag=1,
+                                    passwordflag=1,
+                                    Will_Delay_Interval_flag=1,
+                                    Will_Delay_Interval_Value=650,
+                                    Payload_Format_Indicator=1,
+                                    Publication_Expiry_Interval_flag=1,
+                                    Response_Topic_Value='muuuuuuum',
+                                    username='on99',
+                                    password='(0)(0)(8)(8)'
+                                    ),
                 SUBSCRIBE_ONLY_TEST_0(['python/#', 'test0']),
                 PUBLISH_ONLY_TEST_0(topic=topic, value=value),
                 # PUBLISH_ONLY_TEST_0(topic=topic, value=value),
@@ -677,13 +970,10 @@ def CONNECT_ATTACK_EMU_1():
                 PUBLISH_ONLY_TEST_0(topic=topic, value=value),
                 # PUBLISH_ONLY_TEST_0(topic=topic, value=value),
                 # PUBLISH_ONLY_TEST_0(topic=topic, value=value),
-                DISCONNECT_ONLY_TEST_1(),
-                DISCONNECT_ONLY_TEST_1(),
-                DISCONNECT_ONLY_TEST_1(),
-                AUTH_ONLY_TEST_0(),
-                AUTH_ONLY_TEST_0(),
-                AUTH_ONLY_TEST_0(),
-                AUTH_ONLY_TEST_0(),
+                AUTH_ONLY_TEST_0(AM_SET=True, RS_SET=True),
+                AUTH_ONLY_TEST_0(AM_SET=True, RS_SET=True),
+                AUTH_ONLY_TEST_0(AM_SET=True, RS_SET=True),
+                AUTH_ONLY_TEST_0(AM_SET=True, RS_SET=True),
             ],
             temp_target_ip)
 
