@@ -1,5 +1,5 @@
 from scapy.contrib.mqtt import MQTT, MQTTConnect, MQTTPublish, MQTTSubscribe, MQTTUnsubscribe, MQTTConnack, MQTTPuback, \
-    MQTTSuback, MQTTUnsuback, MQTTPubrec, MQTTPubrel, MQTTPubcomp, MQTTDisconnect
+    MQTTSuback, MQTTUnsuback, MQTTPubrec, MQTTPubrel, MQTTPubcomp, MQTTDisconnect, MQTTTopic, MQTTTopicQOS
 from scapy.layers.inet import IP, TCP
 from scapy.all import *
 import random
@@ -10,6 +10,9 @@ logging.basicConfig(
     level=logging.NOTSET,
     format='%(asctime)s - %(levelname)s - %(name)s - %(message)s'
 )
+ERR_MESSAGE = {
+    0: 'NUMBER ERROR'
+}
 
 destination = '192.168.31.244'
 source = '192.168.31.233'
@@ -34,6 +37,11 @@ CONTROL_PACKET_TYPE = {
     13: 'PINGRESP',
     14: 'DISCONNECT',
     15: 'AUTH'  # Added in v5.0
+}
+PROTOCOL_LEVEL = {
+    3: 'v3.1',
+    4: 'v3.1.1',
+    5: 'v5.0'
 }
 
 
@@ -171,7 +179,7 @@ def CONNECT_ONLY_TEST_0(
     """
     properties = b''
     properties_length = 0
-    if cleansess == 1:
+    if cleansess != 0:
         # SET Session_Expiry_Interval
         sign = 0x11
         before_bytes = [
@@ -229,8 +237,8 @@ def CONNECT_ONLY_TEST_0(
 
     will_length = 0
     will_properties = b''
-    if willflag == 1:
-        if Will_Delay_Interval_flag == 1:
+    if willflag != 0:
+        if Will_Delay_Interval_flag != 0:
             wdi_sign = 0x18
             wdi_bb = [
                 wdi_sign,
@@ -250,7 +258,7 @@ def CONNECT_ONLY_TEST_0(
         will_length += len(pfi_bb)
         will_properties += bytes(pfi_bb)
 
-        if Publication_Expiry_Interval_flag == 1:
+        if Publication_Expiry_Interval_flag != 0:
             pei_sign = 0x02
             pei_bb = [
                 pei_sign,
@@ -284,7 +292,7 @@ def CONNECT_ONLY_TEST_0(
         will_properties += bytes(rt_bb)
         will_properties += rt_utf8
 
-        if Correlation_Data_flag == 1:
+        if Correlation_Data_flag != 0:
             cd_sign = 0x09
             cd_utf8 = Correlation_Data_Value.encode('utf-8')
             cd_bb = [
@@ -317,7 +325,68 @@ def CONNECT_ONLY_TEST_0(
         password=password
     )
     logging.debug(
-        msg=f'CONNECT PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'CONNECT PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
+    )
+    return package
+
+
+def CONNECT_ONLY_TEST_1(
+        protoname='MQTT',
+        protolevel=4,
+        usernameflag=0,
+        passwordflag=0,
+        willretainflag=0,
+        willQOSflag=0,
+        willflag=0,
+        cleansess=0,
+        reserved=0,
+        klive=60,
+        clientId="None",
+        willtopic="None",
+        willmsg='None',
+        username='None',
+        password='None'
+):
+    """
+    Make for MQTTv3.0 or MQTTv3.1.1
+    :param protoname:
+    :param protolevel: 3 or 4
+    :param usernameflag:
+    :param passwordflag:
+    :param willretainflag:
+    :param willQOSflag:
+    :param willflag:
+    :param cleansess:
+    :param reserved:
+    :param klive:
+    :param clientId:
+    :param willtopic:
+    :param willmsg:
+    :param username:
+    :param password:
+    :return:
+    """
+    if not (protolevel == 3 or protolevel == 4):
+        raise Exception(ERR_MESSAGE.get(0))
+    package = AUTO_MQTT_HEAD(mqtt_type=1) / MQTTConnect(
+        protoname=protoname,
+        protolevel=protolevel,
+        usernameflag=usernameflag,
+        passwordflag=passwordflag,
+        willretainflag=willretainflag,
+        willQOSflag=willQOSflag,
+        willflag=willflag,
+        cleansess=cleansess,
+        reserved=reserved,
+        klive=klive,
+        clientId=clientId,
+        willtopic=willtopic,
+        willmsg=willmsg,
+        username=username,
+        password=password
+    )
+    logging.debug(
+        msg=f'CONNECT PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -409,7 +478,7 @@ def PUBLISH_ONLY_TEST_0(topic, value):
     # package.show()
     # print('*' * 100)
     logging.debug(
-        msg=f'PUBLISH PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'PUBLISH PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -475,7 +544,7 @@ def Topic_Suffix(retain_handling=0, retain_as_published=0, no_local=0, qos=0):
     return options
 
 
-def Fresh_Topic(topics: List[str], mqtt_type=8):
+def Fresh_Topic(topics: List[str], mqtt_type=8, retain_handling=0, retain_as_published=0, no_local=0, qos=0):
     """
     报文间隔符修正
     :param topics:
@@ -489,10 +558,16 @@ def Fresh_Topic(topics: List[str], mqtt_type=8):
         if mqtt_type == 8:
             if index1 == 0:
                 topics[index1] = chr(0) + chr(tempLen >> 8) + chr(tempLen & 0x00FF) + topics[index1] + chr(
-                    Topic_Suffix())
+                    Topic_Suffix(retain_handling=retain_handling,
+                                 retain_as_published=retain_as_published,
+                                 no_local=no_local,
+                                 qos=qos))
             else:
                 topics[index1] = chr(tempLen >> 8) + chr(tempLen & 0x00FF) + topics[index1] + chr(
-                    Topic_Suffix())
+                    Topic_Suffix(retain_handling=retain_handling,
+                                 retain_as_published=retain_as_published,
+                                 no_local=no_local,
+                                 qos=qos))
         elif mqtt_type == 10:
             if index1 == 0:
                 topics[index1] = chr(0) + chr(tempLen >> 8) + chr(tempLen & 0x00FF) + topics[index1]
@@ -502,31 +577,116 @@ def Fresh_Topic(topics: List[str], mqtt_type=8):
     return topics
 
 
-def SUBSCRIBE_ONLY_TEST_0(topics=None):
+def SUBSCRIBE_ONLY_TEST_0(topics=None, retain_handling=0, retain_as_published=0, no_local=0, qos=0):
+    """
+    MAKE FOR MQTTv5.0
+    :param topics: 主题集合
+    :param retain_handling:Send msgs at subscription time (default:0)
+    :param retain_as_published:
+    :param no_local:
+    :param qos:
+    :return:
+    """
     if topics is None:
         topics = ['#']
     msgid = random.randint(1, 65533)
-    topics = Fresh_Topic(topics, mqtt_type=8)
+    topics = Fresh_Topic(topics, mqtt_type=8, retain_handling=retain_handling, retain_as_published=retain_as_published,
+                         no_local=no_local, qos=qos)
     package = AUTO_MQTT_HEAD(mqtt_type=8) / MQTTSubscribe(msgid=msgid, topics=topics)
     logging.debug(
-        msg=f'SUBSCRIBE PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'SUBSCRIBE PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
+    )
+    return package
+
+
+def Fresh_Topic_1(topics_ft: List[str], mqtt_type=8, qos=0):
+    """
+    废弃了
+    make for mqttv3.0
+    :param topics_ft:
+    :return:
+    """
+    ft_index = 0
+    ft_n = len(topics_ft)
+    while ft_index < ft_n:
+        if mqtt_type == 8:
+            templen = len(topics_ft[ft_index])
+            topics_ft[ft_index] = chr((templen >> 8) & 0xff) + chr(templen & 0xff) + topics_ft[ft_index] + chr(qos)
+            ft_index += 1
+        else:
+            templen = len(topics_ft[ft_index])
+            topics_ft[ft_index] = chr((templen >> 8) & 0xff) + chr(templen & 0xff) + topics_ft[ft_index]
+            ft_index += 1
+    return topics_ft
+
+
+def make_mqtt_topic_qos(topic: str, qos=0):
+    return MQTTTopicQOS(topic=topic, QOS=qos)
+
+
+def make_mqtt_topic(topic: str):
+    return MQTTTopic(topic=topic)
+
+
+def SUBSCRIBE_ONLY_TEST_1(topics=None, qos=0):
+    """
+    Make for MQTTv3.0
+    :param topics:
+    :param qos:
+    :return:
+    """
+    if topics is None:
+        topics = ['#']
+    msgid = random.randint(1, 65533)
+    # topics = Fresh_Topic_1(topics_ft=topics, mqtt_type=8, qos=qos)
+    topics_empty = []
+    for v in topics:
+        topics_empty.append(make_mqtt_topic_qos(v, qos))
+    package = AUTO_MQTT_HEAD(mqtt_type=8) / MQTTSubscribe(msgid=msgid, topics=topics_empty)
+    logging.debug(
+        msg=f'SUBSCRIBE PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
 
 def UNSUBSCRIBE_ONLY_TEST_0(topics=None):
+    """
+    MAKE FOR MQTTV5.0
+    :param topics:
+    :return:
+    """
     if topics is None:
         topics = ['#']
     topics = Fresh_Topic(topics, mqtt_type=10)
     msgid = random.randint(1, 65533)
     package = AUTO_MQTT_HEAD(mqtt_type=10) / MQTTUnsubscribe(msgid=msgid, topics=topics)
     logging.debug(
-        msg=f'UNSUBSCRIBE PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'UNSUBSCRIBE PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
 
-def CONEECTACK_ONLY_TEST_0():
+def UNSUBSCRIBE_ONLY_TEST_1(topics=None):
+    """
+    Make for MQTTv3.0
+    :param topics:
+    :return:
+    """
+    if topics is None:
+        topics = ['#']
+    msgid = random.randint(1, 65533)
+    # topics = Fresh_Topic_1(topics_ft=topics, mqtt_type=8)
+    topic_empty = []
+    for v in topics:
+        topic_empty.append(make_mqtt_topic(v))
+    package = AUTO_MQTT_HEAD(mqtt_type=10) / MQTTUnsubscribe(msgid=msgid, topics=topic_empty)
+    logging.debug(
+        msg=f'UNSUBSCRIBE PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
+    )
+    return package
+
+
+def CONEECTACK_ONLY_TEST_0(retcode=0):
     """
     sessPresentFlag?
     retcode::
@@ -664,9 +824,10 @@ def CONEECTACK_ONLY_TEST_0():
            UNION_ID_Subscription_Identifier_Available() + \
            UNION_ID_Topic_Alias_Maximum() + \
            UNION_ID_Wildcard_Subscription_Available()
-    package = AUTO_MQTT_HEAD(mqtt_type=2) / MQTTConnack(sessPresentFlag=1, retcode=0) / Raw(bytes([len(nums)] + nums))
+    package = AUTO_MQTT_HEAD(mqtt_type=2) / MQTTConnack(sessPresentFlag=1, retcode=retcode) / Raw(
+        bytes([len(nums)] + nums))
     logging.debug(
-        msg=f'CONEECTACK PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'CONEECTACK PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -675,7 +836,7 @@ def PUBACK_ONLY_TEST_0():
     msgid = random.randint(1, 65533)
     package = AUTO_MQTT_HEAD(mqtt_type=4) / MQTTPuback(msgid=msgid)
     logging.debug(
-        msg=f'PUBACK PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'PUBACK PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -684,7 +845,7 @@ def SUBACK_ONLY_TEST_0():
     msgid = random.randint(1, 65533)
     package = AUTO_MQTT_HEAD(mqtt_type=9) / MQTTSuback(msgid=msgid, retcode=0)
     logging.debug(
-        msg=f'PUBACK PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'SUBACK PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -694,7 +855,7 @@ def UNSUBACK_ONLY_TEST_0():
     retcode = 0x00
     package = AUTO_MQTT_HEAD(mqtt_type=11) / MQTTUnsuback(msgid=msgid) / Raw(bytes([retcode]))
     logging.debug(
-        msg=f'UNSUBACK PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'UNSUBACK PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -703,7 +864,7 @@ def PUBREC_ONLY_TEST_0():
     msgid = random.randint(1, 65533)
     package = AUTO_MQTT_HEAD(mqtt_type=5) / MQTTPubrec(msgid=msgid)
     logging.debug(
-        msg=f'PUBREC PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'PUBREC PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -712,7 +873,7 @@ def PUBREL_ONLY_TEST_0():
     msgid = random.randint(1, 65533)
     package = AUTO_MQTT_HEAD(mqtt_type=6) / MQTTPubrel(msgid=msgid)
     logging.debug(
-        msg=f'PUBREL PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'PUBREL PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -721,7 +882,7 @@ def PUBCOMP_ONLY_TEST_0():
     msgid = random.randint(1, 65533)
     package = AUTO_MQTT_HEAD(mqtt_type=7) / MQTTPubcomp(msgid=msgid)
     logging.debug(
-        msg=f'PUBCOMP PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'PUBCOMP PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -729,7 +890,7 @@ def PUBCOMP_ONLY_TEST_0():
 def PINGREQ_ONLY_TEST_0():
     package = AUTO_MQTT_HEAD(mqtt_type=12)
     logging.debug(
-        msg=f'PINGREQ PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'PINGREQ PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -737,7 +898,7 @@ def PINGREQ_ONLY_TEST_0():
 def PINGRESP_ONLY_TEST_0():
     package = AUTO_MQTT_HEAD(mqtt_type=13)
     logging.debug(
-        msg=f'PINGRESP PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'PINGRESP PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -753,7 +914,7 @@ def DISCONNECT_ONLY_TEST_1():
     nums = [0x00, 0x00]
     package = AUTO_MQTT_HEAD(mqtt_type=14) / MQTTDisconnect() / Raw(bytes(nums))
     logging.debug(
-        msg=f'PUBCOMP PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'DISCONNECT PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -847,7 +1008,7 @@ def AUTH_ONLY_TEST_0(
     package = package / chr(length) / final_byte_stream
 
     logging.debug(
-        msg=f'PUBCOMP PACKET BUILD <{package}> - <{package.fields}>'
+        msg=f'AUTH PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
     )
     return package
 
@@ -884,12 +1045,10 @@ def send_scenarii(packets, ip):
 
 
 def GEN_RANDOM_PACKAGE():
-    ERR_MESSAGE = {
-        0: 'NUMBER ERROR'
-    }
     number = random.randint(0, 150) % 15 + 1
     if number == 1:
         # return build_mqtt_connect_packet_only(randomIP.RANDOM_NAME(suffix='MQTT_'))
+        # PLEASE CHECK HOW TO USE THE <CONNECT_ONLY_TEST_0(**KARGS)>
         CONNECT_ONLY_TEST_0(clientId=randomIP.RANDOM_NAME(suffix='MQTT_'), willflag=1, willretainflag=1, usernameflag=1,
                             passwordflag=1)
     elif number == 2:
@@ -946,26 +1105,36 @@ def CONNECT_ATTACK_EMU_1():
 
         send_scenarii(
             [
-                # build_mqtt_connect_packet_only(temp_client_id),
-                CONNECT_ONLY_TEST_0(clientId=temp_client_id,
-                                    willflag=1,
-                                    willretainflag=1,
-                                    usernameflag=1,
-                                    passwordflag=1,
-                                    Will_Delay_Interval_flag=1,
-                                    Will_Delay_Interval_Value=650,
-                                    Payload_Format_Indicator=1,
-                                    Publication_Expiry_Interval_flag=1,
-                                    Response_Topic_Value='muuuuuuum',
-                                    username='on99',
-                                    password='(0)(0)(8)(8)'
-                                    ),
-                SUBSCRIBE_ONLY_TEST_0(['python/#', 'test0']),
+                # CONNECT_ONLY_TEST_0(clientId=temp_client_id,
+                #                     willQOSflag=0,
+                #                     cleansess=1,
+                #                     willflag=1,
+                #                     willretainflag=1,
+                #                     usernameflag=1,
+                #                     passwordflag=1,
+                #                     Will_Delay_Interval_flag=1,
+                #                     Will_Delay_Interval_Value=650,
+                #                     Payload_Format_Indicator=1,
+                #                     Publication_Expiry_Interval_flag=1,
+                #                     Response_Topic_Value='muuuuuuum',
+                #                     username='on99',
+                #                     password='(0)(0)(8)(8)',
+                #                     klive=60,
+                #                     willtopic="WILLTOPICWILL",
+                #                     willmsg="WILL_MSGGG",
+                #                     Content_Type_Value="JACKSON",
+                #                     Correlation_Data_flag=1,
+                #                     Correlation_Data_Value="NOTHING"
+                #                     ),
+
+                CONNECT_ONLY_TEST_1(clientId=temp_client_id, usernameflag=1, passwordflag=1, willretainflag=1,
+                                    willflag=1, cleansess=1),
+                SUBSCRIBE_ONLY_TEST_1(['python/#', 'test0']),
                 PUBLISH_ONLY_TEST_0(topic=topic, value=value),
                 # PUBLISH_ONLY_TEST_0(topic=topic, value=value),
                 PUBLISH_ONLY_TEST_0(topic='test0', value=value),
                 # PUBLISH_ONLY_TEST_0(topic='test0', value=value),
-                UNSUBSCRIBE_ONLY_TEST_0(['python/#', 'test0']),
+                UNSUBSCRIBE_ONLY_TEST_1(['python/#', 'test0']),
                 # PUBLISH_ONLY_TEST_0(topic=topic, value=value),
                 PUBLISH_ONLY_TEST_0(topic=topic, value=value),
                 # PUBLISH_ONLY_TEST_0(topic=topic, value=value),
