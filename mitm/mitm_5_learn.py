@@ -155,12 +155,23 @@ class MqttPublish:
                             self.msgid_len +
                             self.hexToInt(mqtt[self.topicLengthNum + 4 + self.msgid_len]) +
                             1:]
+        self.properties = mqtt[
+                          self.topicLengthNum + 4 + self.msgid_len
+                          :
+                          self.topicLengthNum + 4 + self.msgid_len + self.hexToInt(
+                              mqtt[self.topicLengthNum + 4 + self.msgid_len]) + 1
+                          ]
         self.messageWords = codecs.decode("".join(self.message), "hex")
         self.messageWords = codecs.decode(self.messageWords, "utf-8")
         if (len(mqtt) - self.messageLengthNum - 2) == 0:
             self.disconnect = False
         else:
             self.disconnect = True
+
+        if self.msgid_len != 0:
+            self.msgid = mqtt[4 + self.topicLengthNum:4 + self.topicLengthNum + 2]
+        else:
+            self.msgid = []
 
     def findTopicName(self, topicLength, mqtt):
         length = self.hexToInt(topicLength)  # convert hex string to int
@@ -225,8 +236,9 @@ class MqttPublish:
 
     def getHex(self):
         full = []
-        meanings = {0: "10", 1: "20", 2: "82", 3: "90", 4: "30", 5: "c0", 6: "d0", 7: "31"}
-        [full.append(meanings[int(x)]) for x in self.messageType]
+        # meanings = {0: "10", 1: "20", 2: "82", 3: "90", 4: "30", 5: "c0", 6: "d0", 7: "31"}
+        # [full.append(meanings[int(x)]) for x in self.messageType]
+        full.append(self.messageType)
         a = self.messageLength.replace("0x", "")
         if len(a) < 2:
             a = '0' + a
@@ -234,6 +246,13 @@ class MqttPublish:
         # [full.append(x) for x in a]
         [full.append(x) for x in self.topicLength]
         [full.append(x) for x in self.topicName]
+        # + or - msgid
+        for x in self.msgid:
+            full.append(x)
+        # + or - properties
+        for x in self.properties:
+            full.append(x)
+        # + message
         [full.append(x.replace("0x", "")) for x in self.message]
         if self.disconnect == True:
             full.append("e0")
