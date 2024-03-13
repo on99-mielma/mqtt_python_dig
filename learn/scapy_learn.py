@@ -332,7 +332,7 @@ def CONNECT_ONLY_TEST_0(
 
 def CONNECT_ONLY_TEST_1(
         protoname='MQTT',
-        protolevel=4,
+        protolevel=3,
         usernameflag=0,
         passwordflag=0,
         willretainflag=0,
