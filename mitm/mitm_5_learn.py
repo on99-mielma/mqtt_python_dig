@@ -12,6 +12,10 @@ logging.basicConfig(
 
 packetList = []
 
+ERROR_MESSAGE = {
+    0: 'MQTT TYPE ERROR'
+}
+
 
 def analysis_pcap(file: str):
     """
@@ -132,8 +136,12 @@ class TcpPacket:
 
     def rebuildPacket(self):
         newPacket = self.entirePacket[:-self.payload_len]
-        newPacket = newPacket + self.mqttPacket.getHex()
-        return " ".join(newPacket)
+        newPayloadLength, hexval = self.mqttPacket.getHex()
+        newPacket = newPacket + hexval
+        # return newPacket
+        self.entirePacket = newPacket
+        self.payload_len = newPayloadLength
+        self.mqtt = self.entirePacket[-newPayloadLength:]
 
 
 # class for the mqtt Connect Command
@@ -254,10 +262,11 @@ class MqttPublish:
             full.append(x)
         # + message
         [full.append(x.replace("0x", "")) for x in self.message]
+        newPayloadLength = len(full)
         if self.disconnect == True:
             full.append("e0")
             full.append("00")
-        return full
+        return newPayloadLength, full
 
 
 def onlyMQTTPackets(packets):
@@ -273,6 +282,23 @@ def onlyMQTTPackets(packets):
     return messageRequests
 
 
+def editMessage(msgPackage: TcpPacket, newMessage='None'):
+    if msgPackage.mqttPacket is None:
+        raise Exception(ERROR_MESSAGE.get(0))
+
+    messageWords = msgPackage.mqttPacket.messageWords
+    logging.debug(
+        msg=f'editMessage - <{msgPackage}> - OLD MESSAGE = <{messageWords}> - NEW MESSAGE = <{newMessage}>'
+    )
+    msgPackage.mqttPacket.changeMessage(newMessage)
+    checkNewMessage = msgPackage.mqttPacket.messageWords
+    logging.debug(
+        msg=f'CHECK = <{newMessage == checkNewMessage}> -> checkNewMessage = <{checkNewMessage}>'
+    )
+    msgPackage.rebuildPacket()
+    return msgPackage
+
+
 if __name__ == '__main__':
     packages = analysis_pcap('./mqttv5_only.pcap')
 
@@ -285,4 +311,7 @@ if __name__ == '__main__':
         packetList.append((seek_package_tcp_payload(tcpPackage=tp), fixHex(tp)))
     print(packetList)
     msg_packages = onlyMQTTPackets(packetList)
+    print(msg_packages)
+
+    msg_packages[0] = editMessage(msg_packages[0])
     print(msg_packages)
