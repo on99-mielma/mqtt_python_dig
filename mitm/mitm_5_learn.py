@@ -1,4 +1,5 @@
 import codecs
+# import random
 
 from scapy.all import *
 from scapy.contrib.mqtt import MQTT
@@ -309,7 +310,11 @@ def editMessage(msgPackage: TcpPacket, newMessage='None'):
 
 
 def modify_mqtt_package(packet: Packet):
+    newMessage = 'TESTING_NOT_NONE'
     if (packet.haslayer(Raw) or packet.haslayer(MQTT)) and packet[TCP].dport == 1883:
+        logging.debug(
+            msg=f'packet <{packet}> - MQTT?=<{packet.haslayer(MQTT)}> - Raw?=<{packet.haslayer(Raw)}>'
+        )
         payload_length = seek_package_tcp_payload(tcpPackage=packet)
         toHex = fixHex(packet)
         toTcpPackage = TcpPacket(payload_len=payload_length, packet=toHex)
@@ -317,12 +322,17 @@ def modify_mqtt_package(packet: Packet):
         if type_num != 3:
             send(packet, verbose=0)
         else:
-            logging.info(
-                msg="MESSAGE EDITING!"
-            )
-            after_edit_strhexval = editMessage(msgPackage=toTcpPackage, newMessage='TESTING_NOT_NONE')
-            packet = bytes_to_packet(after_edit_strhexval.entirePacket)
-            send(packet, verbose=3, iface=interface)
+            if toTcpPackage.mqttPacket.messageWords == newMessage:
+                pass
+            else:
+                logging.info(
+                    msg="MESSAGE EDITING!"
+                )
+                after_edit_strhexval = editMessage(msgPackage=toTcpPackage, newMessage=newMessage)
+                packet = bytes_to_packet(after_edit_strhexval.entirePacket,
+                                         before_package_length=after_edit_strhexval.payload_len)
+                time.sleep(0.5)
+                send(packet, verbose=3, iface=interface)
 
 
 def hexstrToint(strlist):
@@ -332,14 +342,28 @@ def hexstrToint(strlist):
     return strlist
 
 
-def bytes_to_packet(data):
+def bytes_to_packet(data, before_package_length):
     data = hexstrToint(data)
     ipnewlen = len(data) - 14
     eth_pkt = Ether(bytes(data))
+    # mqtt_len = len(eth_pkt[TCP].payload)
+    if eth_pkt.haslayer('TCP'):
+        eth_pkt[TCP].ack += before_package_length
+        eth_pkt[TCP].seq += before_package_length
     package = eth_pkt
     if IP in eth_pkt:
         package = eth_pkt[IP]
         package.len = ipnewlen
+        # package[IP].len = ipnewlen
+
+    # detect_package = package.copy()
+    # if IP in detect_package:
+    #     detect_package[TCP].payload = NoPayload()
+    #     detect_package[IP].len -= mqtt_len
+    #     detect_package[TCP].flags = 'A'
+    #     detect_package[TCP].ack += mqtt_len
+    #     detect_package[TCP].seq += mqtt_len
+    #     detect_package[TCP].window = package[TCP].window - 1
 
     # if IP in eth_pkt:
     #     ip_pkt = eth_pkt[IP]
@@ -357,21 +381,22 @@ def bytes_to_packet(data):
 
 
 if __name__ == '__main__':
-    # packages = analysis_pcap('./mqttv5_only.pcap')
-    #
-    # # rawlist = []
-    # # for p in packages:
-    # #     print(str(raw(p))) # this can replace str
-    # tcp_packages = seek_tcp_package(packages=packages)
-    # for tp in tcp_packages:
-    #     packetList.append((seek_package_tcp_payload(tcpPackage=tp), fixHex(tp)))
-    # print(packetList)
-    # msg_packages = onlyMQTTPackets(packetList)
-    # print(msg_packages)
-    #
-    # msg_packages[0] = editMessage(msg_packages[0])
-    # print(msg_packages)
-    # ans = bytes_to_packet(msg_packages[0].entirePacket)
-    # print(ans)
+    packages = analysis_pcap('./mqttv5_only.pcap')
+
+    # rawlist = []
+    # for p in packages:
+    #     print(str(raw(p))) # this can replace str
+    tcp_packages = seek_tcp_package(packages=packages)
+    for tp in tcp_packages:
+        packetList.append((seek_package_tcp_payload(tcpPackage=tp), fixHex(tp)))
+    print(packetList)
+    msg_packages = onlyMQTTPackets(packetList)
+    print(msg_packages)
+
+    msg_packages[0] = editMessage(msg_packages[0])
+    print(msg_packages)
+    ans = bytes_to_packet(msg_packages[0].entirePacket, 0)
+    print(ans)
+    modify_mqtt_package(packet=packages[6])
 
     sniff(iface=interface, filter=filter_rule, prn=modify_mqtt_package, session=IPSession, store=False)
