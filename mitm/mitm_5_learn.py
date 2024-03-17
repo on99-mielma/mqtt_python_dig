@@ -96,7 +96,7 @@ class TcpPacket:
         self.mqtt = packet[-payload_len:]
         self.payload_len = payload_len
         self.mqttType = self.typeMap(self.mqtt[0])
-        print(self.mqttType)
+        # print(self.mqttType)
         if self.mqttType[0] == 3:
             self.mqttPacket = MqttPublish(self.mqtt)
         else:
