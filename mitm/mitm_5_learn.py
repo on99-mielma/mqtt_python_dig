@@ -383,8 +383,18 @@ def bytes_to_packet(data, before_package_length):
     #         return package
     return package
 
+def get_all_interfaces():
+    interfaces = conf.ifaces
+    logging.debug(
+        msg=f'\n{interfaces}\n'
+    )
+    # for ifaceee in interfaces:
+    #     logging.debug(
+    #         msg=f'INTERFACE:<{ifaceee.name}>'
+    #     )
 
 if __name__ == '__main__':
+    get_all_interfaces()
     packages = analysis_pcap('./mqttv5_only.pcap')
 
     # rawlist = []
