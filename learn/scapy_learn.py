@@ -1082,7 +1082,9 @@ def GEN_RANDOM_PACKAGE_EQUAL(number: int = 1, clientId_suffix='MQTT_', topic_suf
     elif number == 15:
         return AUTH_ONLY_TEST_0()
     else:
-        raise Exception(ERR_MESSAGE.get(0))
+        return PINGREQ_ONLY_TEST_0()
+        # raise Exception(ERR_MESSAGE.get(0))
+    return PINGREQ_ONLY_TEST_0()
 
 
 def GEN_RANDOM_PACKAGE_PUBLISH_MAIN():
@@ -1161,6 +1163,8 @@ def CONNECT_ATTACK_EMU_1():
 
         try:
             flood_attack()
+            # random_attack()
+
 
         except ConnectionAbortedError as cae:
             print(f'Error = <{cae}>')
