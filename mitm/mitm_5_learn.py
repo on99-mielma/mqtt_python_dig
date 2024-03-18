@@ -343,16 +343,20 @@ def hexstrToint(strlist):
 
 
 def bytes_to_packet(data, before_package_length):
+    # logging.debug(msg=f'before_package_length = <{before_package_length}>')
+
     data = hexstrToint(data)
     ipnewlen = len(data) - 14
     eth_pkt = Ether(bytes(data))
     # mqtt_len = len(eth_pkt[TCP].payload)
     if eth_pkt.haslayer('TCP'):
-        eth_pkt[TCP].ack += before_package_length
-        eth_pkt[TCP].seq += before_package_length
+        eth_pkt[TCP].ack += (before_package_length+1)
+        eth_pkt[TCP].seq += (before_package_length+1)
     package = eth_pkt
     if IP in eth_pkt:
         package = eth_pkt[IP]
+        del package.chksum
+        del package[TCP].chksum
         package.len = ipnewlen
         # package[IP].len = ipnewlen
 
