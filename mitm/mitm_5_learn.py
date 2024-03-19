@@ -6,7 +6,7 @@ from scapy.contrib.mqtt import MQTT
 from scapy.layers.inet import TCP, IP
 
 import logging
-
+import CONST
 from scapy.layers.l2 import Ether
 
 logging.basicConfig(
@@ -22,7 +22,7 @@ ERROR_MESSAGE = {
 
 # 设置监听的网络接口和过滤条件
 interface = "Realtek PCIe 2.5GbE Family Controller"  # 替换为你的网络接口名称
-filter_rule = "tcp port 1883 and dst host 148.70.99.98"
+filter_rule = f"tcp port 1883 and dst host {CONST.IP_ADDRESS}"
 
 
 def analysis_pcap(file: str):

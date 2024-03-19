@@ -21,12 +21,12 @@ from scapy.all import *
 from scapy.contrib.mqtt import MQTT, MQTTConnect, MQTTPublish
 from scapy.layers.inet import IP, TCP
 
-
+import CONST
 
 # 建立TCP连接
-target_ip = "192.168.31.244"
+target_ip = CONST.IP_ADDRESS
 client_id = "socket_scapy_test"
-target_port = 1883
+target_port = CONST.DST_PORT
 source_ip = "192.168.31.233"
 src_port = RandShort()
 BUFFSIZE = 2048

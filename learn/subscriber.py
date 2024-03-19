@@ -1,7 +1,7 @@
 import paho.mqtt.client as mqtt
-
-broker = '192.168.31.244'
-port = 1883
+import CONST
+broker = CONST.IP_ADDRESS
+port = CONST.DST_PORT
 topic = 'python/#'
 client_id = 'python-mqtt-74'
 
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     mqttc.on_connect = on_connect
     mqttc.on_message = on_message
 
-    mqttc.connect("148.70.99.98", 1883, 60)
+    mqttc.connect(broker, port, 60)
 
     # Blocking call that processes network traffic, dispatches callbacks and
     # handles reconnecting.

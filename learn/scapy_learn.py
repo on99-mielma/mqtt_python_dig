@@ -3,6 +3,8 @@ from scapy.contrib.mqtt import MQTT, MQTTConnect, MQTTPublish, MQTTSubscribe, MQ
 from scapy.layers.inet import IP, TCP
 from scapy.all import *
 import random
+
+import CONST
 import randomIP
 import logging
 
@@ -14,7 +16,7 @@ ERR_MESSAGE = {
     0: 'NUMBER ERROR'
 }
 
-destination = '192.168.31.244'
+destination = CONST.IP_ADDRESS
 source = '192.168.31.233'
 client_id = "scapy_test"
 topic = "python/shit"

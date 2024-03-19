@@ -2,6 +2,8 @@ import logging
 from scapy.all import *
 from scapy.contrib.mqtt import MQTT
 from scapy.layers.inet import TCP
+
+import CONST
 import mitm.mitm_5_learn as m5
 
 logging.basicConfig(
@@ -16,7 +18,7 @@ ERROR_MESSAGE = {
 
 # 设置监听的网络接口和过滤条件
 interface = "Realtek PCIe 2.5GbE Family Controller"  # 替换为你的网络接口名称
-filter_rule = "tcp port 1883"
+filter_rule = f"tcp port {CONST.DST_PORT}"
 
 
 def seek_tcp_package(package):
