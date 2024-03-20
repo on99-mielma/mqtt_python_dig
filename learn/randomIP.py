@@ -65,6 +65,21 @@ def RANDOM_NAME(suffix: str = '', randomLen: int = 8):
     return ans
 
 
+def RANDOM_JSON(key_len: int = 4):
+    charlist = '1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM_'
+    begin = '{\n'
+    middle = ''
+    for i in range(key_len):
+        key = RANDOM_NAME(randomLen=4)
+        value = RANDOM_NAME(randomLen=6)
+        if i < key_len - 1:
+            middle += f'"{key}":"{value}",'
+        else:
+            middle += f'"{key}":"{value}"'
+    end = '\n}'
+    return begin + middle + end
+
+
 if __name__ == '__main__':
     # so = Solution()
     # for _ in range(100):
@@ -75,3 +90,4 @@ if __name__ == '__main__':
     #     print('<' * 64)
 
     print(RANDOM_NAME(suffix='MQTT_', randomLen=9))
+    print(RANDOM_JSON())
