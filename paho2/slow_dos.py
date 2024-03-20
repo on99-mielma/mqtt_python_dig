@@ -1,7 +1,7 @@
 """
 This is a method in MQTTSA, but it is not compatible with the latest version of paho. I have adapted/upgraded it to the
 new version of paho here, but the principle is no different from that in MQTTSA
-MQTTSA:https://www.researchgate.net/publication/341563324_SlowITe_a_Novel_Denial_of_Service_Attack_Affecting_MQTT
+MQTTSA PAPER:https://www.researchgate.net/publication/341563324_SlowITe_a_Novel_Denial_of_Service_Attack_Affecting_MQTT
 MQTTSA GITHUB:https://github.com/stfbk/mqttsa
 MQTTSA OFFICIAL WEBSITE:https://sites.google.com/fbk.eu/mqttsa/home
 """
