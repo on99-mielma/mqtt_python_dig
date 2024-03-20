@@ -1,3 +1,11 @@
+"""
+This is a method in MQTTSA, but it is not compatible with the latest version of paho. I have adapted/upgraded it to the
+new version of paho here, but the principle is no different from that in MQTTSA
+MQTTSA:https://www.researchgate.net/publication/341563324_SlowITe_a_Novel_Denial_of_Service_Attack_Affecting_MQTT
+MQTTSA GITHUB:https://github.com/stfbk/mqttsa
+MQTTSA OFFICIAL WEBSITE:https://sites.google.com/fbk.eu/mqttsa/home
+"""
+
 import ssl
 import time
 
@@ -16,7 +24,7 @@ publish_times = []
 slow_connections = 3000
 
 
-# To stay consitent with Sniffing attack
+# 与嗅探攻击保持一致
 class Credentials:
     def __init__(self):
         # boolean flag used to check if the object is empty or not
@@ -39,11 +47,9 @@ class Credentials:
 
 
 def on_connect_3(client, userdata, flags, rc):
-    """print(f"\n\n{client._client_id.decode()} connection. Result: {mqtt.connack_string(rc)} Code: {rc}", flush=True)
-    if (userdata):
-        print("- Userdata "+ str(userdata), flush=True)
-    if (flags): #Reveals if session is already present
-        print("- Flags "+ str(flags), flush=True)"""
+    """
+    连接回调函数，当客户端连接成功时被调用
+    """
     global connected
     w = userdata.get("on_connect_received", None)
     if w is not None:
@@ -55,13 +61,15 @@ def on_connect_3(client, userdata, flags, rc):
 
 def on_connect_5(client, userdata, flags, reasonCode, properties):
     """
-    if (properties):
-        print(f"{client._client_id.decode()} properties {properties}", flush=True)
+    连接回调函数，当客户端连接成功时被调用（MQTTv5版本）
     """
     on_connect_3(client, userdata, flags, reasonCode)
 
 
 def subscribe_callback_3(client, userdata, mid, granted_qos):
+    """
+    订阅回调函数，当客户端成功订阅主题时被调用
+    """
     if userdata.get("on_subscribe_received", None) is not None:
         userdata["on_subscribe_received"] = True
     if userdata.get("test_name", None) is not None and userdata["test_name"] == 'queue' and userdata.get(
@@ -70,10 +78,16 @@ def subscribe_callback_3(client, userdata, mid, granted_qos):
 
 
 def subscribe_callback_5(client, userdata, mid, reason_code_list, properties):
+    """
+    订阅回调函数，当客户端成功订阅主题时被调用（MQTTv5版本）
+    """
     subscribe_callback_3(client=client, userdata=userdata, mid=mid, granted_qos=reason_code_list)
 
 
 def message_callback(client, userdata, message):
+    """
+    消息回调函数，当客户端接收到消息时被调用
+    """
     print(f'received message = <{message}>')
 
     if userdata.get("received_payload", None) is not None:
@@ -88,10 +102,16 @@ def message_callback(client, userdata, message):
 
 
 def publish_callback_5(client, userdata, mid, reason_code, properties):
+    """
+    发布回调函数，当消息成功发布时被调用（MQTTv5版本）
+    """
     publish_callback_3(client=client, userdata=userdata, mid=mid)
 
 
 def publish_callback_3(client, userdata, mid):
+    """
+    发布回调函数，当消息成功发布时被调用
+    """
     global publish_times
     if userdata.get("test_name", None) is not None and userdata["test_name"] == "avg_publish_time":
         if userdata["pre_publish"] is not None:
@@ -103,6 +123,9 @@ def publish_callback_3(client, userdata, mid):
 
 
 def set_callbacks_and_parameters(client, test_name, credentials, cert_key_paths, version):
+    """
+    设置回调函数和参数
+    """
     # Set username, password, and eventually the certificate and keys (only the clientID must be unique)
     if not credentials.empty:
         client.username_pw_set(credentials.username, credentials.password)
@@ -110,8 +133,6 @@ def set_callbacks_and_parameters(client, test_name, credentials, cert_key_paths,
         client.tls_set(cert_key_paths[0], cert_key_paths[1], cert_key_paths[2], ssl.CERT_NONE,
                        tls_version=ssl.PROTOCOL_TLS, ciphers=None)
         client.tls_insecure_set(True)  # allow to test scenarios with self-signed certificates
-
-    # Set the rest of methods/properties shared between the publisher and subscriber
     if version == mqtt.CallbackAPIVersion.VERSION2:
         client.on_connect = on_connect_5
         client.on_publish = publish_callback_5
@@ -136,15 +157,20 @@ def set_callbacks_and_parameters(client, test_name, credentials, cert_key_paths,
 
 
 def gen_connect_properties():
+    """
+    生成连接属性
+    """
     connect_properties = Properties(PacketTypes.CONNECT)
     connect_properties.SessionExpiryInterval = 86400  # 0x11 - 1 day
     return connect_properties
 
 
 def init_client(host, version, port, keepalive, test_name, client_id, clean, credentials, cert_key_paths):
+    """
+    初始化客户端
+    """
     if version == mqtt.CallbackAPIVersion.VERSION2:
         client = mqtt.Client(callback_api_version=version, client_id=client_id, protocol=mqtt.MQTTv5)
-        # ClientID, name of the test to perform, credentials and certificates
         set_callbacks_and_parameters(client, test_name, credentials, cert_key_paths, version)
         if test_name == "slow_dos":
             client.connect_async(host, port, keepalive, clean_start=clean, properties=gen_connect_properties())
