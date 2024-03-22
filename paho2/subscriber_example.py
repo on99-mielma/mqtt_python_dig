@@ -1,9 +1,12 @@
 import paho.mqtt.client as mqtt
 import CONST
+
 broker = CONST.IP_ADDRESS
 port = CONST.DST_PORT
 topic = 'python/#'
 client_id = 'python-mqtt-74'
+
+
 def on_subscribe(client, userdata, mid, reason_code_list, properties):
     # Since we subscribed only for a single channel, reason_code_list contains
     # a single entry
@@ -11,6 +14,7 @@ def on_subscribe(client, userdata, mid, reason_code_list, properties):
         print(f"Broker rejected you subscription: {reason_code_list[0]}")
     else:
         print(f"Broker granted the following QoS: {reason_code_list[0].value}")
+
 
 def on_unsubscribe(client, userdata, mid, reason_code_list, properties):
     # Be careful, the reason_code_list is only present in MQTTv5.
@@ -21,12 +25,14 @@ def on_unsubscribe(client, userdata, mid, reason_code_list, properties):
         print(f"Broker replied with failure: {reason_code_list[0]}")
     client.disconnect()
 
+
 def on_message(client, userdata, message):
     # userdata is the structure we choose to provide, here it's a list()
     userdata.append(message.payload)
     # We only want to process 10 messages
     if len(userdata) >= 10:
         client.unsubscribe(topic)
+
 
 def on_connect(client, userdata, flags, reason_code, properties):
     if reason_code.is_failure:
@@ -35,6 +41,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
         # we should always subscribe from on_connect callback to be sure
         # our subscribed is persisted across reconnections.
         client.subscribe(topic)
+
 
 if __name__ == '__main__':
     mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
