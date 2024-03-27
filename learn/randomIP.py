@@ -55,6 +55,9 @@ def IPV4():
 def IPV6():
     return ":".join(format(random.randint(0, 65535), 'x') for _ in range(8))
 
+def PORT():
+    return random.randint(1,65535)
+
 
 def RANDOM_NAME(suffix: str = '', randomLen: int = 8):
     charlist = '1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM_'
@@ -66,7 +69,6 @@ def RANDOM_NAME(suffix: str = '', randomLen: int = 8):
 
 
 def RANDOM_JSON(key_len: int = 4):
-    charlist = '1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM_'
     begin = '{\n'
     middle = ''
     for i in range(key_len):

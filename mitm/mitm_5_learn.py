@@ -97,6 +97,7 @@ class TcpPacket:
         self.payload_len = payload_len
         self.mqttType = self.typeMap(self.mqtt[0])
         # print(self.mqttType)
+        self.qos = self.detect_qos(self.mqtt[0])
         if self.mqttType[0] == 3:
             self.mqttPacket = MqttPublish(self.mqtt)
         else:
@@ -151,6 +152,10 @@ class TcpPacket:
         self.payload_len = newPayloadLength
         self.mqtt = self.entirePacket[-newPayloadLength:]
         return self.entirePacket
+
+    def detect_qos(self, hexVal):
+        qos = int(bin(int(hexVal, 16))[2:].zfill(8)[5:7], 2)
+        return qos
 
 
 # class for the mqtt Connect Command
@@ -350,8 +355,8 @@ def bytes_to_packet(data, before_package_length):
     eth_pkt = Ether(bytes(data))
     # mqtt_len = len(eth_pkt[TCP].payload)
     if eth_pkt.haslayer('TCP'):
-        eth_pkt[TCP].ack += (before_package_length+1)
-        eth_pkt[TCP].seq += (before_package_length+1)
+        eth_pkt[TCP].ack += (before_package_length + 1)
+        eth_pkt[TCP].seq += (before_package_length + 1)
     package = eth_pkt
     if IP in eth_pkt:
         package = eth_pkt[IP]
@@ -383,6 +388,7 @@ def bytes_to_packet(data, before_package_length):
     #         return package
     return package
 
+
 def get_all_interfaces():
     interfaces = conf.ifaces
     logging.debug(
@@ -392,6 +398,7 @@ def get_all_interfaces():
     #     logging.debug(
     #         msg=f'INTERFACE:<{ifaceee.name}>'
     #     )
+
 
 if __name__ == '__main__':
     get_all_interfaces()
