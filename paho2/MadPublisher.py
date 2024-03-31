@@ -59,6 +59,7 @@ def run_with_client(topic_suffix, api_version, target_broker, target_port, msgs_
     mqtt_client.on_publish = publish_callback_5 if api_version == mqtt.CallbackAPIVersion.VERSION2 else publish_callback_3
     mqtt_client.user_data_set(unacked_publish)
     mqtt_client.connect(host=target_broker, port=target_port)
+    mqtt_client.subscribe(topic=TOPIC_SUFFIX+'#')
     mqtt_client.loop_start()
     msg_deque = deque()
     for _ in range(msgs_len):

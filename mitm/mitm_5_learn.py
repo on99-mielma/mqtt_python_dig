@@ -92,56 +92,90 @@ def fixHex(packet):
 
 class TcpPacket:
     def __init__(self, payload_len, packet):  # here packet should be a list of hex values
+        """
+        :param payload_len: MQTT报文长度
+        :param packet: 十六进制字符串数组
+        """
         self.entirePacket = packet
+        self.tcp_packet = self.entirePacket[34:]
         self.mqtt = packet[-payload_len:]
         self.payload_len = payload_len
         self.mqttType = self.typeMap(self.mqtt[0])
         # print(self.mqttType)
         self.qos = self.detect_qos(self.mqtt[0])
+        self.source_port = self.hexToInt(self.tcp_packet[0:2])
+        self.destination_port = self.hexToInt(self.tcp_packet[2:4])
+        self.raw_sequence_number = self.hexToInt(self.tcp_packet[4:8])
+        self.raw_acknowledgment_number = self.hexToInt(self.tcp_packet[8:12])
+        self.header_length_flags = self.hexToInt(self.tcp_packet[12:14])
+        self.header_length, self.flags = self.cut_headerLen_flags(self.header_length_flags)
+        self.window = self.hexToInt(self.tcp_packet[14:16])
+        self.checksum = self.hexToInt(self.tcp_packet[16:18])
+        self.urgent_pointer = self.hexToInt(self.tcp_packet[18:20])
+        self.next_sequence_number = self.calculate_next_sequence_number(nowRaw=self.raw_sequence_number,
+                                                                        nowPayloadLength=self.payload_len)
         if self.mqttType[0] == 3:
             self.mqttPacket = MqttPublish(self.mqtt)
         else:
             self.mqttPacket = None  # rest of packet will be MQTT
+        self.flag_dict = {
+            0: "Fin",
+            1: "Syn",
+            2: "Reset",
+            3: "Push",
+            4: "Acknowledgment",
+            5: "Urgent",
+            6: "ECN-Echo",
+            7: "Congestion Window Reduced",
+            8: "Accurate",
+            9: "Reserved0",
+            10: "Reserved1",
+            11: "Reserved2"
+        }
 
     def typeMap(self, hexVal):
-        meanings = {
-            "0": 0,
-            "1": 1,
-            "2": 2,
-            "3": 3,
-            "4": 4,
-            "5": 5,
-            "6": 6,
-            "7": 7,
-            "8": 8,
-            "9": 9,
-            "a": 10,
-            "b": 11,
-            "c": 12,
-            "d": 13,
-            "e": 14,
-            "f": 15
-        }
-        hexToCommand = {
-            1: "Connect Command",
-            2: "Connect Ack",
-            3: "Publisher Message",
-            4: "PUBACK",
-            5: "Publish Received",
-            6: "Publish Release",
-            7: "Publish Complete",
-            8: "Suscribe Request",
-            9: "Suscribe Ack",
-            10: "Unsuscribe Request",
-            11: "Unsuscribe Ack",
-            12: "Ping Request",
-            13: "Ping Response",
-            14: "Disconnect Req",
-            15: "AUTH",
-        }
-        a = meanings[hexVal[0]]
-        b = hexToCommand[a]
-        return (a, b)
+        try:
+            meanings = {
+                "0": 0,
+                "1": 1,
+                "2": 2,
+                "3": 3,
+                "4": 4,
+                "5": 5,
+                "6": 6,
+                "7": 7,
+                "8": 8,
+                "9": 9,
+                "a": 10,
+                "b": 11,
+                "c": 12,
+                "d": 13,
+                "e": 14,
+                "f": 15
+            }
+            hexToCommand = {
+                1: "Connect Command",
+                2: "Connect Ack",
+                3: "Publisher Message",
+                4: "PUBACK",
+                5: "Publish Received",
+                6: "Publish Release",
+                7: "Publish Complete",
+                8: "Suscribe Request",
+                9: "Suscribe Ack",
+                10: "Unsuscribe Request",
+                11: "Unsuscribe Ack",
+                12: "Ping Request",
+                13: "Ping Response",
+                14: "Disconnect Req",
+                15: "AUTH",
+            }
+            a = meanings[hexVal[0]]
+            b = hexToCommand[a]
+            return (a, b)
+        except Exception as e:
+            print(e)
+            return None
 
     def rebuildPacket(self):
         newPacket = self.entirePacket[:-self.payload_len]
@@ -154,8 +188,50 @@ class TcpPacket:
         return self.entirePacket
 
     def detect_qos(self, hexVal):
-        qos = int(bin(int(hexVal, 16))[2:].zfill(8)[5:7], 2)
-        return qos
+        try:
+            qos = int(bin(int(hexVal, 16))[2:].zfill(8)[5:7], 2)
+            return qos
+        except Exception as e:
+            print(e)
+            return None
+
+    def hexToInt(self, length):
+        try:
+            return int("".join(length), 16)
+        except Exception as e:
+            print(e)
+            return None
+
+    def cut_headerLen_flags(self, OctVal: int):
+        if OctVal is None:
+            return None
+        header_length = OctVal >> 12
+        flags = {
+            0: False,
+            1: False,
+            2: False,
+            3: False,
+            4: False,
+            5: False,
+            6: False,
+            7: False,
+            8: False,
+            9: False,
+            10: False,
+            11: False
+        }
+        ov12 = OctVal & 0xFFF
+        count = 0
+        while ov12 > 0:
+            flags[count] = bool(ov12 & 1)
+            count += 1
+            ov12 = ov12 >> 1
+        return header_length, flags
+
+    def calculate_next_sequence_number(self, nowRaw, nowPayloadLength):
+        if nowRaw is None or nowPayloadLength is None:
+            return None
+        return nowRaw + nowPayloadLength
 
 
 # class for the mqtt Connect Command

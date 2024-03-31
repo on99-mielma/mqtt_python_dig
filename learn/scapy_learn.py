@@ -5,7 +5,7 @@ from scapy.all import *
 import random
 
 import CONST
-import randomIP
+import learn.randomIP as randomIP
 import logging
 
 logging.basicConfig(
@@ -596,7 +596,7 @@ def SUBSCRIBE_ONLY_TEST_0(topics=None, retain_handling=0, retain_as_published=0,
                          no_local=no_local, qos=qos)
     package = AUTO_MQTT_HEAD(mqtt_type=8) / MQTTSubscribe(msgid=msgid, topics=topics)
     logging.info(
-        msg=f'SUBSCRIBE PACKET BUILD <{package}> - <{package.fields}> - <{package.payload.fields}>'
+        msg=f'SUBSCRIBE PACKET BUILD <{package}> - <{package.fields}> - <{package.original}>'
     )
     return package
 
@@ -923,9 +923,9 @@ def DISCONNECT_ONLY_TEST_1():
 
 def AUTH_ONLY_TEST_0(
         AM_SET=False,
-        AM_VALUE='None',
+        AM_VALUE='SCRAM-SHA-256',
         AD_SET=False,
-        AD_DATA='None',
+        AD_DATA='\0\0\0\0',
         RS_SET=False,
         RS_DATA='None',
         UP_SET=False,
@@ -995,7 +995,7 @@ def AUTH_ONLY_TEST_0(
         length += length_tmp
         final_byte_stream += package_tmp
     if AD_SET:
-        length_tmp, package_tmp = SET_Authentication_Method(AD_DATA)
+        length_tmp, package_tmp = SET_Authentication_Data(AD_DATA)
         length += length_tmp
         final_byte_stream += package_tmp
     if RS_SET:
@@ -1082,7 +1082,7 @@ def GEN_RANDOM_PACKAGE_EQUAL(number: int = 1, clientId_suffix='MQTT_', topic_suf
     elif number == 14:
         return DISCONNECT_ONLY_TEST_1()
     elif number == 15:
-        return AUTH_ONLY_TEST_0()
+        return AUTH_ONLY_TEST_0(AM_SET=True, RS_SET=True, AD_SET=True, UP_SET=True)
     else:
         return PINGREQ_ONLY_TEST_0()
         # raise Exception(ERR_MESSAGE.get(0))
@@ -1114,7 +1114,7 @@ def CONNECT_ATTACK_EMU_1():
                     topicName='test/#'
                 ) for _ in range(10000)
             ],
-            temp_target_ip)
+            destination)
 
     def flood_attack():
         send_scenarii(
@@ -1147,7 +1147,7 @@ def CONNECT_ATTACK_EMU_1():
                 )
             ] * 5000
             ,
-            temp_target_ip)
+            destination)
 
     round = 0
     while True:
@@ -1156,7 +1156,7 @@ def CONNECT_ATTACK_EMU_1():
             msg=f'ATTACK ROUND {round} START!'
         )
         temp_client_id = randomIP.RANDOM_NAME(suffix='MQTT_')
-        temp_target_ip = '148.70.99.98'
+        temp_target_ip = destination
         temp_target_port = 1883
         temp_src_ip = randomIP.IPV4()
         temp_src_port = random.randint(12000, 16665)
