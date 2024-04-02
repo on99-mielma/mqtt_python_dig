@@ -23,7 +23,7 @@ USER_SET = set(list(DATABASE_USER_PASS_DICT.keys()))
 PASS_SET = set(list(DATABASE_USER_PASS_DICT.values()))
 SUSPECT_COUNT = 0
 # 设置监听的网络接口和过滤条件
-interface = "Realtek PCIe 2.5GbE Family Controller"  # 替换为你的网络接口名称
+interface = CONST.INTERFACE  # 替换为你的网络接口名称
 filter_rule = f"tcp port {CONST.DST_PORT}"
 
 
@@ -90,7 +90,7 @@ def opening_sniff():
     logging.info(
         msg='sniff on!!! mode = <ANTI BRUTEFORCE>\n'
     )
-    sniff(iface=interface, filter=filter_rule, prn=show_mqtt_package, session=IPSession, store=False, timeout=40)
+    sniff(iface=interface, filter=filter_rule, prn=show_mqtt_package, session=IPSession, store=False)
 
 
 if __name__ == '__main__':

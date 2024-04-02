@@ -21,7 +21,7 @@ ERROR_MESSAGE = {
 }
 
 # 设置监听的网络接口和过滤条件
-interface = "Realtek PCIe 2.5GbE Family Controller"  # 替换为你的网络接口名称
+interface = CONST.INTERFACE  # 替换为你的网络接口名称
 filter_rule = f"tcp port 1883 and dst host {CONST.IP_ADDRESS}"
 
 

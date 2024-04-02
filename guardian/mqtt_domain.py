@@ -1,6 +1,7 @@
 import codecs
 
 from scapy.contrib.mqtt import MQTT
+from scapy.layers.inet import TCP, IP
 from scapy.utils import rdpcap
 
 GLOBAL_VERSION = 5
@@ -8,6 +9,10 @@ GLOBAL_VERSION = 5
 ERROR_MESSAGE = {
     0: 'SCAPY_SUSPECT',
     1: 'BRUTE_SUSPECT',
+    2: 'TCP_PROBLEM',
+    3: 'IP_PROBLEM',
+    4: 'MQTT_PROBLEM',
+    5: 'PACKAGE MISSING'
 }
 
 
@@ -21,11 +26,38 @@ class MQTTPackage:
         :param packet: scapy packet
         """
         try:
+
             self.suspect = 0
             get_mqtt_out = packet[MQTT]
+            if packet.haslayer(IP):
+                self.source_ip = packet[IP].src
+                self.destination_ip = packet[IP].dst
+            else:
+                self.suspect += 1
+                raise Exception(ERROR_MESSAGE.get(3))
+
+            if packet.haslayer(TCP):
+                self.source_port = packet[TCP].sport
+                self.destination_port = packet[TCP].dport
+            else:
+                self.suspect += 1
+                raise Exception(ERROR_MESSAGE.get(2))
+
+            if self.source_ip is not None and self.source_port is not None:
+                self.source_union = ':'.join([self.source_ip, self.source_ip])
+                self.source_union = self.source_union.strip()
+            else:
+                raise Exception(ERROR_MESSAGE.get(5))
+
+            if self.destination_ip is not None and self.destination_port is not None:
+                self.destination_union = ':'.join([self.destination_ip, self.destination_port])
+                self.destination_union = self.destination_union.strip()
+            else:
+                raise Exception(ERROR_MESSAGE.get(5))
+
             if get_mqtt_out.payload is None:
                 self.suspect += 1
-                raise Exception("suspect")
+                raise Exception(ERROR_MESSAGE.get(4))
             self.type = int(get_mqtt_out.type)
             self.dup = get_mqtt_out.DUP
             self.qos = get_mqtt_out.QOS
