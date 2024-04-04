@@ -44,13 +44,13 @@ class MQTTPackage:
                 raise Exception(ERROR_MESSAGE.get(2))
 
             if self.source_ip is not None and self.source_port is not None:
-                self.source_union = ':'.join([self.source_ip, self.source_ip])
+                self.source_union = ':'.join([self.source_ip, str(self.source_port)])
                 self.source_union = self.source_union.strip()
             else:
                 raise Exception(ERROR_MESSAGE.get(5))
 
             if self.destination_ip is not None and self.destination_port is not None:
-                self.destination_union = ':'.join([self.destination_ip, self.destination_port])
+                self.destination_union = ':'.join([self.destination_ip, str(self.destination_port)])
                 self.destination_union = self.destination_union.strip()
             else:
                 raise Exception(ERROR_MESSAGE.get(5))
@@ -647,7 +647,7 @@ def analyze_bytes(hexstrlist, mode):
 
 
 if __name__ == '__main__':
-    packages = rdpcap('pcap/connectcommand.pcap')
+    packages = rdpcap('pcap/test_tcpip.pcap')
     list0 = []
     list1 = []
     for p in packages:
