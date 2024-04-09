@@ -26,6 +26,7 @@ ERROR_MESSAGE = {
     13: f'{THEME} SUSPECT! REASON:<MISSING SUBSCRIBE/UNSUBSCRIBE>',
     14: f'{THEME} SUSPECT! REASON:<MULTIPLE PING>',
     15: f'{THEME} SUSPECT! REASON:<MISSING PING REQUEST>',
+    16: f'{THEME} BLOCK!>',
 }
 
 """
@@ -37,7 +38,8 @@ PING_REQUEST PING_RESPONSE
 PUBLISH PUBLISH_ACK (QOS == 1)
 PUBLISH PUBLISH_REC PUBLISH_REL PUBLISH_COMP (QOS == 2)
 """
-SUSPECT_COUNT = 0
+SUSPECT_COUNT = defaultdict(int)
+SUSPECT_COUNT_MARK = 10
 # 设置监听的网络接口和过滤条件
 interface = CONST.INTERFACE  # 替换为你的网络接口名称
 filter_rule = f"tcp port {CONST.DST_PORT}"
@@ -50,7 +52,26 @@ UNSUBSCRIBE_DICT = {}
 PING_DICT = {}
 
 
+def add_to_blocklist(address: str):
+    import guardian.block_list as bl
+    bl.init_add_save(address=address)
+
+
+def get_blocklist():
+    import guardian.block_list as bl
+    return bl.static_get()
+
+
+def add_refresh(address: str):
+    add_to_blocklist(address)
+    return get_blocklist()
+
+
+GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET = get_blocklist()
+
+
 def match_package(package: GMD.MQTTPackage, mode=0):
+    global SUSPECT_COUNT
     try:
         if mode is None or mode == 0:
             raise Exception(ERROR_MESSAGE.get(0))
@@ -187,17 +208,28 @@ def match_package(package: GMD.MQTTPackage, mode=0):
             else:
                 del CONNECT_DICT[package.source_union]
     except AttributeError as ae:
+        SUSPECT_COUNT[package.source_union] += 1
         print(f'AttributeError with <{ae}>')
     except Exception as e:
+        SUSPECT_COUNT[package.source_union] += 1
         print(f'Exception with <{e}>')
 
 
 def show_mqtt_package(packet: Packet):
+    global GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET
+    global SUSPECT_COUNT
     if packet.haslayer(MQTT):
         package = GMD.MQTTPackage(packet=packet)
+        if package.source_union in GLOBAL_BLOCK_IP_SET or package.source_union in GLOBAL_BLOCK_TCPIP_SET:
+            logging.info(
+                msg=f'{ERROR_MESSAGE.get(16)}'
+            )
+            return None
         type_mode = package.type
         match_package(package=package, mode=type_mode)
-
+        if SUSPECT_COUNT[package.source_union] > SUSPECT_COUNT_MARK:
+            GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET = add_refresh(address=package.source_union)
+            raise Exception(ERROR_MESSAGE.get(2))
 
 def opening_sniff():
     logging.info(

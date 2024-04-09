@@ -15,6 +15,7 @@ ERROR_MESSAGE = {
     2: 'BRUTEFORCE DETECTED!',
     3: 'MISSING USERNAME OR PASSWORD !',
     4: 'BRUTEFORCE SUSPECT!',
+    5: 'BLOCK!'
 }
 
 # 在数据库中存储的已有的用户密码集
@@ -27,7 +28,32 @@ interface = CONST.INTERFACE  # 替换为你的网络接口名称
 filter_rule = f"tcp port {CONST.DST_PORT}"
 
 
-def ratio_detect(value: str, mode=0):
+def add_to_blocklist(address: str):
+    import guardian.block_list as bl
+    bl.init_add_save(address=address)
+
+
+def get_blocklist():
+    import guardian.block_list as bl
+    return bl.static_get()
+
+
+def add_refresh(address: str):
+    add_to_blocklist(address)
+    return get_blocklist()
+
+
+GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET = get_blocklist()
+
+
+def ratio_detect(value: str, mode=0, address=None):
+    global GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET
+    if address in GLOBAL_BLOCK_IP_SET or address in GLOBAL_BLOCK_TCPIP_SET:
+        logging.info(
+            msg=f'{ERROR_MESSAGE.get(5)}'
+        )
+        return None
+    global SUSPECT_COUNT
     MaxRatio = 0.0
     if mode == 0:
         for u in USER_SET:
@@ -51,20 +77,21 @@ def ratio_detect(value: str, mode=0):
         logging.info(
             msg=f'{ERROR_MESSAGE.get(4)}'
         )
-        global SUSPECT_COUNT
         SUSPECT_COUNT += 1
         if SUSPECT_COUNT > 5:
             logging.info(
                 msg=f'{ERROR_MESSAGE.get(2)}'
             )
+            GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET = add_refresh(address=address)
+
     else:
-        global SUSPECT_COUNT
         SUSPECT_COUNT = max(0, SUSPECT_COUNT - 3)
 
 
 def show_mqtt_package(packet: Packet):
     if packet.haslayer(MQTT):
         newpacket = GMD.MQTTPackage(packet=packet)
+        src_union = newpacket.source_union
         if newpacket.type == 1:
             subpacket = newpacket.subMQTTPackage
             username = None
@@ -81,9 +108,9 @@ def show_mqtt_package(packet: Packet):
                 )
             else:
                 if username is not None:
-                    ratio_detect(username, 0)
+                    ratio_detect(username, 0, address=src_union)
                 if password is not None:
-                    ratio_detect(password, 1)
+                    ratio_detect(password, 1, address=src_union)
 
 
 def opening_sniff():
@@ -95,3 +122,8 @@ def opening_sniff():
 
 if __name__ == '__main__':
     opening_sniff()
+    # blocklist = get_blocklist()
+    # print(blocklist)
+    # add_to_blocklist('192.168.31.233')
+    # blocklist = get_blocklist()
+    # print(blocklist)

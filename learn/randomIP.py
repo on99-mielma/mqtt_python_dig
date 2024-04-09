@@ -83,13 +83,13 @@ def RANDOM_JSON(key_len: int = 4):
 
 
 if __name__ == '__main__':
-    # so = Solution()
+    so = Solution()
     # for _ in range(100):
     #     ip6 = IPV4()
     #     print('>' * 64)
     #     print(ip6)
     #     print(so.validIPAddress(ip6))
     #     print('<' * 64)
-
+    print(so.validIPAddress('10.1.1.7:8888'))
     print(RANDOM_NAME(suffix='MQTT_', randomLen=9))
     print(RANDOM_JSON())
