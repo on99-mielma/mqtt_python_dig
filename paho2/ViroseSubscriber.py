@@ -1,7 +1,7 @@
 import logging
 import paho.mqtt.client as mqtt
 import CONST
-from learn import randomIP
+
 
 BROKER = CONST.IP_ADDRESS
 PORT = CONST.DST_PORT

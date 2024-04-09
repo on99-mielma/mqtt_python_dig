@@ -1,5 +1,3 @@
-import socket
-import time
 
 # s = socket.socket()
 #
@@ -19,7 +17,7 @@ import time
 # c.close()
 from scapy.all import *
 from scapy.contrib.mqtt import MQTT, MQTTConnect, MQTTPublish
-from scapy.layers.inet import IP, TCP
+from scapy.layers.inet import TCP
 
 import CONST
 

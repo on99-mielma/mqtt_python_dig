@@ -1,6 +1,3 @@
-import collections
-import time
-
 from scapy.all import *
 from scapy.contrib.mqtt import MQTT
 
