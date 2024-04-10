@@ -4,6 +4,7 @@ from collections import deque
 import logging
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
+import paho.mqtt.subscribe as subscribe
 from paho.mqtt.enums import MQTTProtocolVersion
 
 import CONST
@@ -123,9 +124,10 @@ def mad_lion(target_broker, target_port, api_version, ez_flag=True):
 
 
 if __name__ == '__main__':
-    mad_lion(
-        target_broker=BROKER,
-        target_port=PORT,
-        api_version=API_VERSION,
-        ez_flag=False
-    )
+    while True:
+        mad_lion(
+            target_broker=BROKER,
+            target_port=PORT,
+            api_version=API_VERSION,
+            ez_flag=True
+        )

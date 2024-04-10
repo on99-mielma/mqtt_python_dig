@@ -1091,7 +1091,7 @@ def GEN_RANDOM_PACKAGE_EQUAL(number: int = 1, clientId_suffix='MQTT_', topic_suf
 
 def GEN_RANDOM_PACKAGE_PUBLISH_MAIN():
     mqtt_type = [3, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-    choose_type = random.choices(mqtt_type, [1, 1, 900, 1, 1, 1, 1, 87, 1, 1, 1, 1, 1, 1, 1])
+    choose_type = random.choices(mqtt_type, [1, 1, 9, 1, 1, 1, 1, 8, 1, 1, 1, 1, 1, 1, 1])
     return choose_type[0]
 
 
@@ -1164,8 +1164,8 @@ def CONNECT_ATTACK_EMU_1():
         value = randomIP.RANDOM_NAME(randomLen=random.randint(10, 20))
 
         try:
-            flood_attack()
-            # random_attack()
+            # flood_attack()
+            random_attack()
 
 
         except ConnectionAbortedError as cae:

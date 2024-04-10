@@ -410,8 +410,10 @@ def modify_mqtt_package(packet: Packet):
                     msg="MESSAGE EDITING!"
                 )
                 after_edit_strhexval = editMessage(msgPackage=toTcpPackage, newMessage=newMessage)
+                # print(after_edit_strhexval.payload_len)
+                # print(payload_length)
                 packet = bytes_to_packet(after_edit_strhexval.entirePacket,
-                                         before_package_length=after_edit_strhexval.payload_len)
+                                         before_package_length=payload_length)
                 time.sleep(0.5)
                 send(packet, verbose=3, iface=interface)
 
@@ -431,8 +433,8 @@ def bytes_to_packet(data, before_package_length):
     eth_pkt = Ether(bytes(data))
     # mqtt_len = len(eth_pkt[TCP].payload)
     if eth_pkt.haslayer('TCP'):
-        eth_pkt[TCP].ack += (before_package_length + 1)
-        eth_pkt[TCP].seq += (before_package_length + 1)
+        eth_pkt[TCP].ack += (before_package_length + 0)
+        eth_pkt[TCP].seq += (before_package_length + 0)
     package = eth_pkt
     if IP in eth_pkt:
         package = eth_pkt[IP]
