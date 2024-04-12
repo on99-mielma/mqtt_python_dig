@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 
 # 指定目录和文件名
-directory = '../guardian/'  # 目录路径
+directory = 'guardian/'  # 目录路径
 filename = 'blocklist.json'  # 文件名
 file_path = os.path.join(directory, filename)
 BLOCK_IP_PORT_SET = set()

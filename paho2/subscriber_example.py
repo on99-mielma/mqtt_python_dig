@@ -3,8 +3,8 @@ import CONST
 
 broker = CONST.IP_ADDRESS
 port = CONST.DST_PORT
-topic = 'python/#'
-client_id = 'python-mqtt-74'
+topic = CONST.SUBSCRIBE_TOPIC
+client_id = CONST.CLIENTID_SUFFIX + "1"
 
 
 def on_subscribe(client, userdata, mid, reason_code_list, properties):

@@ -23,6 +23,7 @@ ERROR_MESSAGE = {
 # 设置监听的网络接口和过滤条件
 interface = CONST.INTERFACE  # 替换为你的网络接口名称
 filter_rule = f"tcp port 1883 and dst host {CONST.IP_ADDRESS}"
+POISON_MESSAGE = CONST.POISON_MESSAGE
 
 
 def analysis_pcap(file: str):
@@ -391,7 +392,8 @@ def editMessage(msgPackage: TcpPacket, newMessage='None'):
 
 
 def modify_mqtt_package(packet: Packet):
-    newMessage = 'TESTING_NOT_NONE'
+    global POISON_MESSAGE
+    newMessage = POISON_MESSAGE
     if (packet.haslayer(Raw) or packet.haslayer(MQTT)) and packet[TCP].dport == 1883:
         logging.debug(
             msg=f'packet <{packet}> - MQTT?=<{packet.haslayer(MQTT)}> - Raw?=<{packet.haslayer(Raw)}>'
@@ -478,24 +480,33 @@ def get_all_interfaces():
     #     )
 
 
-if __name__ == '__main__':
-    get_all_interfaces()
-    packages = analysis_pcap('./mqttv5_only.pcap')
+def check_loacl_pcap():
+    try:
+        packages = analysis_pcap('./mqttv5_only.pcap')
 
-    # rawlist = []
-    # for p in packages:
-    #     print(str(raw(p))) # this can replace str
-    tcp_packages = seek_tcp_package(packages=packages)
-    for tp in tcp_packages:
-        packetList.append((seek_package_tcp_payload(tcpPackage=tp), fixHex(tp)))
-    print(packetList)
-    msg_packages = onlyMQTTPackets(packetList)
-    print(msg_packages)
+        # rawlist = []
+        # for p in packages:
+        #     print(str(raw(p))) # this can replace str
+        tcp_packages = seek_tcp_package(packages=packages)
+        for tp in tcp_packages:
+            packetList.append((seek_package_tcp_payload(tcpPackage=tp), fixHex(tp)))
+        print(packetList)
+        msg_packages = onlyMQTTPackets(packetList)
+        print(msg_packages)
 
-    msg_packages[0] = editMessage(msg_packages[0])
-    print(msg_packages)
-    ans = bytes_to_packet(msg_packages[0].entirePacket, 0)
-    print(ans)
-    modify_mqtt_package(packet=packages[6])
+        msg_packages[0] = editMessage(msg_packages[0])
+        print(msg_packages)
+        ans = bytes_to_packet(msg_packages[0].entirePacket, 0)
+        print(ans)
+        modify_mqtt_package(packet=packages[6])
+    except Exception as e:
+        print(e)
 
+
+def open_sniffing():
     sniff(iface=interface, filter=filter_rule, prn=modify_mqtt_package, session=IPSession, store=False)
+
+
+if __name__ == '__main__':
+    check_loacl_pcap()
+    open_sniffing()

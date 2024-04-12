@@ -5,15 +5,15 @@ import CONST
 
 BROKER = CONST.IP_ADDRESS
 PORT = CONST.DST_PORT
-TOPIC_SUB = 'python/#'
+TOPIC_SUB = CONST.SUBSCRIBE_TOPIC
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(name)s - %(message)s'
 )
 
-POISON_MESSAGE = '{\n "code":404\n}'
-API_VERSION = mqtt.CallbackAPIVersion.VERSION2
+POISON_MESSAGE = CONST.POISON_MESSAGE
+API_VERSION = mqtt.CallbackAPIVersion.VERSION2 if CONST.BIG_MQTT_VERSION == 5 else mqtt.CallbackAPIVersion.VERSION1
 
 
 def subscribe_callback_3(client, userdata, mid, granted_qos):
@@ -184,6 +184,7 @@ def publish_callback_3(client, userdata, mid):
 
 
 def poison(api_version,target_broker, target_port):
+    print(POISON_MESSAGE)
     mqtt_client = mqtt.Client(callback_api_version=api_version)
     mqtt_client.on_publish = publish_callback_5 if api_version == mqtt.CallbackAPIVersion.VERSION2 else publish_callback_3
     mqtt_client.on_connect = connect_callback_5 if api_version == mqtt.CallbackAPIVersion.VERSION2 else connect_callback_3
@@ -196,8 +197,8 @@ def poison(api_version,target_broker, target_port):
     logging.info(
         msg=f'mqtt_client.loop_forever()!!!'
     )
-    mqtt_client.loop_forever()
     print(mqtt_client.user_data_get())
+    mqtt_client.loop_forever()
 
 
 if __name__ == '__main__':

@@ -4,7 +4,6 @@ from collections import deque
 import logging
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
-import paho.mqtt.subscribe as subscribe
 from paho.mqtt.enums import MQTTProtocolVersion
 
 import CONST
@@ -16,8 +15,8 @@ logging.basicConfig(
 )
 BROKER = CONST.IP_ADDRESS
 PORT = CONST.DST_PORT
-API_VERSION = mqtt.CallbackAPIVersion.VERSION2
-TOPIC_SUFFIX = 'test/'
+API_VERSION = mqtt.CallbackAPIVersion.VERSION2 if CONST.BIG_MQTT_VERSION == 5 else mqtt.CallbackAPIVersion.VERSION1
+TOPIC_SUFFIX = CONST.PUBLISH_TOPIC_SUFFIX
 
 
 def publish_callback_5(client, userdata, mid, reason_code, properties):
@@ -60,7 +59,7 @@ def run_with_client(topic_suffix, api_version, target_broker, target_port, msgs_
     mqtt_client.on_publish = publish_callback_5 if api_version == mqtt.CallbackAPIVersion.VERSION2 else publish_callback_3
     mqtt_client.user_data_set(unacked_publish)
     mqtt_client.connect(host=target_broker, port=target_port)
-    mqtt_client.subscribe(topic=TOPIC_SUFFIX+'#')
+    mqtt_client.subscribe(topic=TOPIC_SUFFIX + '#')
     mqtt_client.loop_start()
     msg_deque = deque()
     for _ in range(msgs_len):
@@ -123,11 +122,15 @@ def mad_lion(target_broker, target_port, api_version, ez_flag=True):
         )
 
 
-if __name__ == '__main__':
+def show_mad_lion(broker, port, api_version, ezflag):
     while True:
         mad_lion(
-            target_broker=BROKER,
-            target_port=PORT,
-            api_version=API_VERSION,
-            ez_flag=True
+            target_broker=broker,
+            target_port=port,
+            api_version=api_version,
+            ez_flag=ezflag
         )
+
+
+if __name__ == '__main__':
+    show_mad_lion(BROKER, PORT, API_VERSION, True)

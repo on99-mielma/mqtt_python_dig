@@ -1,9 +1,11 @@
 import time
 import paho.mqtt.client as mqtt
 import CONST
+
 broker = CONST.IP_ADDRESS
 port = CONST.DST_PORT
-topic = 'python/paho2'
+topic = F'{CONST.PUBLISH_TOPIC_SUFFIX}paho2'
+
 
 def on_publish(client, userdata, mid, reason_code, properties):
     # reason_code and properties will only be present in MQTTv5. It's always unset in MQTTv3

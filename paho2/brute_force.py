@@ -14,7 +14,7 @@ from learn import randomIP
 
 ip_target_const = CONST.IP_ADDRESS
 port_const = CONST.DST_PORT
-version_const = mqtt.CallbackAPIVersion.VERSION2
+version_const = mqtt.CallbackAPIVersion.VERSION2 if CONST.BIG_MQTT_VERSION == 5 else mqtt.CallbackAPIVersion.VERSION1
 
 
 def on_connect_3(client, userdata, flags, rc):

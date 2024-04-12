@@ -17,11 +17,11 @@ import CONST
 
 ip_target_const = CONST.IP_ADDRESS
 port_const = CONST.DST_PORT
-version_const = mqtt.CallbackAPIVersion.VERSION2
+version_const = mqtt.CallbackAPIVersion.VERSION2 if CONST.BIG_MQTT_VERSION == 5 else mqtt.CallbackAPIVersion.VERSION1
 connected = 0
 slow_connection_difference = 0
 publish_times = []
-slow_connections = 3000
+slow_connections = CONST.SLOW_DOS_CONNECTIONS_SUM
 
 
 # 与嗅探攻击保持一致
