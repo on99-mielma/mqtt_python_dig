@@ -137,3 +137,5 @@ if __name__ == '__main__':
         mqtt_publish_json()
         time.sleep(1)
         mqttc.loop(timeout=1)
+    mqttc.disconnect()
+    print('END OF THE PROGRAM')

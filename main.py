@@ -186,7 +186,7 @@ def main():
     if args.mqttversion is not None:
         BIG_MQTT_VERSION = CONST.BIG_MQTT_VERSION = args.mqttversion
     if args.subtopic is not None:
-        SUBSCRIBE_TOPIC = CONST.SUBCRIBE_TOPIC = args.subtopic
+        SUBSCRIBE_TOPIC = CONST.SUBSCRIBE_TOPIC = args.subtopic
     if args.pubtopicsuffix is not None:
         PUBLISH_TOPIC_SUFFIX = CONST.PUBLISH_TOPIC_SUFFIX = args.pubtopicsuffix
     if args.clientidsuffix is not None:
@@ -236,10 +236,10 @@ def main():
             import paho2.slow_dos as sd
             credentials = sd.Credentials()
             cert_key_paths = [None, None, None]
-            timew = (int(SLOW_DOS_CONNECTIONS_SUM * 0.04)) if (SLOW_DOS_CONNECTIONS_SUM * 0.04 > 60) else 60
+            timew = int(SLOW_DOS_CONNECTIONS_SUM * 0.04) if (SLOW_DOS_CONNECTIONS_SUM * 0.04 > 60) else 60
             ans2 = sd.slow_dos(IP_ADDRESS,
                                mqtt.CallbackAPIVersion.VERSION2 if BIG_MQTT_VERSION == 5 else mqtt.CallbackAPIVersion.VERSION1,
-                               DST_PORT, credentials, cert_key_paths, timew)
+                               DST_PORT, credentials, cert_key_paths, SLOW_DOS_CONNECTIONS_SUM, timew)
             print(F'SLOW DOS RESULT == <{ans2}>')
         elif args.bruteforce:
             import paho2.brute_force as bf

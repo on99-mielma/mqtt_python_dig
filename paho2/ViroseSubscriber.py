@@ -184,7 +184,8 @@ def publish_callback_3(client, userdata, mid):
 
 
 def poison(api_version,target_broker, target_port):
-    print(POISON_MESSAGE)
+    print(f'POISON_MESSAGE = <{POISON_MESSAGE}>')
+    print(f'SUB_TOPIC = <{TOPIC_SUB}>')
     mqtt_client = mqtt.Client(callback_api_version=api_version)
     mqtt_client.on_publish = publish_callback_5 if api_version == mqtt.CallbackAPIVersion.VERSION2 else publish_callback_3
     mqtt_client.on_connect = connect_callback_5 if api_version == mqtt.CallbackAPIVersion.VERSION2 else connect_callback_3
