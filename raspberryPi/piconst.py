@@ -1,0 +1,7 @@
+UP_TOPIC = 'rax/up'
+DOWN_TOPIC = 'rax/down'
+PORT = 1883
+BROKER = '192.168.31.233'
+SUB_TOPIC = 'rax/#'
+QOS = 0
+API_VERSION = 5
