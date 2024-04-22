@@ -39,7 +39,7 @@ PUBLISH PUBLISH_ACK (QOS == 1)
 PUBLISH PUBLISH_REC PUBLISH_REL PUBLISH_COMP (QOS == 2)
 """
 SUSPECT_COUNT = defaultdict(int)
-SUSPECT_COUNT_MARK = 10
+SUSPECT_COUNT_MARK = 7
 # 设置监听的网络接口和过滤条件
 interface = CONST.INTERFACE  # 替换为你的网络接口名称
 filter_rule = f"tcp port {CONST.DST_PORT}"
@@ -208,10 +208,10 @@ def match_package(package: GMD.MQTTPackage, mode=0):
             else:
                 del CONNECT_DICT[package.source_union]
     except AttributeError as ae:
-        SUSPECT_COUNT[package.source_union] += 1
+        SUSPECT_COUNT[package.source_ip] += 1
         print(f'AttributeError with <{ae}>')
     except Exception as e:
-        SUSPECT_COUNT[package.source_union] += 1
+        SUSPECT_COUNT[package.source_ip] += 1
         print(f'Exception with <{e}>')
 
 
@@ -219,7 +219,7 @@ def show_mqtt_package(packet: Packet):
     global GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET
     global SUSPECT_COUNT
     if packet.haslayer(MQTT):
-        package = GMD.MQTTPackage(packet=packet,decode_flag=False)
+        package = GMD.MQTTPackage(packet=packet, decode_flag=False)
         if package.source_union in GLOBAL_BLOCK_IP_SET or package.source_union in GLOBAL_BLOCK_TCPIP_SET:
             logging.info(
                 msg=f'{ERROR_MESSAGE.get(16)}'
@@ -227,9 +227,10 @@ def show_mqtt_package(packet: Packet):
             return None
         type_mode = package.type
         match_package(package=package, mode=type_mode)
-        if SUSPECT_COUNT[package.source_union] > SUSPECT_COUNT_MARK:
-            GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET = add_refresh(address=package.source_union)
-            raise Exception(ERROR_MESSAGE.get(2))
+        if SUSPECT_COUNT[package.source_ip] > SUSPECT_COUNT_MARK:
+            GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET = add_refresh(address=package.source_ip)
+            print(f'{ERROR_MESSAGE.get(2)} FROM <{package.source_ip}>')
+
 
 def opening_sniff():
     logging.info(

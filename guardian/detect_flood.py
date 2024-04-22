@@ -42,7 +42,7 @@ GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET = get_blocklist()
 
 
 def package_count(package: GMD.MQTTPackage):
-    source = package.source_union
+    source = package.source_ip
     if source is None:
         raise Exception(ERROR_MESSAGE.get(1))
     RATE_COUNT[source] += 1
@@ -57,7 +57,7 @@ def refresh_rate_count():
 def show_mqtt_package(packet: Packet):
     global GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET
     if packet.haslayer(MQTT):
-        package = GMD.MQTTPackage(packet)
+        package = GMD.MQTTPackage(packet, decode_flag=False)
         if package.source_union in GLOBAL_BLOCK_IP_SET or package.source_union in GLOBAL_BLOCK_TCPIP_SET:
             logging.info(
                 msg=f'{ERROR_MESSAGE.get(4)}'
@@ -66,36 +66,40 @@ def show_mqtt_package(packet: Packet):
         package_count(package=package)
 
 
-def opening_sniff(interval=1, endcount=10000, warning_line=600.0):
+def opening_sniff(interval=1, endcount=10000, warning_line=90.0):
     global GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET
     while True:
-        global COUNT
-        COUNT += 1
-        if COUNT > endcount:
-            break
-        logging.info(
-            msg=f'sniff on!!! mode = <DETECT FLOOD> count = {COUNT}'
-        )
-        capture_start_time = time.time()
-        sniff(iface=interface, filter=filter_rule, prn=show_mqtt_package, session=IPSession, store=False,
-              timeout=interval)
-        capture_end_time = time.time()
-        capture_duration = capture_end_time - capture_start_time
-        if len(RATE_COUNT) == 0:
+        try:
+            global COUNT
+            COUNT += 1
+            if COUNT > endcount:
+                break
             logging.info(
-                msg=ERROR_MESSAGE.get(2)
+                msg=f'sniff on!!! mode = <DETECT FLOOD> count = {COUNT}'
             )
-        else:
-            for k, v in RATE_COUNT.items():
-                rate = v / capture_duration
-                temp_suspect = ''
-                if rate > warning_line:
-                    temp_suspect = ERROR_MESSAGE.get(3)
-                    GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET = add_refresh(address=k)
+            capture_start_time = time.time()
+            sniff(iface=interface, filter=filter_rule, prn=show_mqtt_package, session=IPSession, store=False,
+                  timeout=interval)
+            capture_end_time = time.time()
+            capture_duration = capture_end_time - capture_start_time
+            if len(RATE_COUNT) == 0:
                 logging.info(
-                    msg=f'DURATION TIME = <{capture_duration}> - PACKAGE KEY = <{k}> - PACKAGE COUNT = <{v}> - PACKAGE RATE = <{rate}>{temp_suspect}\n'
+                    msg=ERROR_MESSAGE.get(2)
                 )
-        refresh_rate_count()
+            else:
+                for k, v in RATE_COUNT.items():
+                    rate = v / capture_duration
+                    temp_suspect = ''
+                    if rate > warning_line:
+                        temp_suspect = ERROR_MESSAGE.get(3)
+                        GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET = add_refresh(address=k)
+                    logging.info(
+                        msg=f'DURATION TIME = <{capture_duration}> - PACKAGE KEY = <{k}> - PACKAGE COUNT = <{v}> - PACKAGE RATE = <{rate}>{temp_suspect}\n'
+                    )
+            refresh_rate_count()
+        except Exception as e:
+            print(e)
+            break
 
 
 if __name__ == '__main__':

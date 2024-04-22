@@ -34,14 +34,17 @@ class MQTTPackage:
                 self.destination_ip = packet[IP].dst
             else:
                 self.suspect += 1
-                raise Exception(ERROR_MESSAGE.get(3))
+                if decode_flag:
+                    raise Exception(ERROR_MESSAGE.get(3))
+
 
             if packet.haslayer(TCP):
                 self.source_port = packet[TCP].sport
                 self.destination_port = packet[TCP].dport
             else:
                 self.suspect += 1
-                raise Exception(ERROR_MESSAGE.get(2))
+                if decode_flag:
+                    raise Exception(ERROR_MESSAGE.get(2))
 
             if self.source_ip is not None and self.source_port is not None:
                 self.source_union = ':'.join([self.source_ip, str(self.source_port)])
