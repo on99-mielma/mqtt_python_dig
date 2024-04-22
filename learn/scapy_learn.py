@@ -1122,7 +1122,10 @@ def CONNECT_ATTACK_EMU_1(mode=0):
 
     def flood_attack():
         send_scenarii(
-            [CONNECT_ONLY_TEST_0(clientId=randomIP.RANDOM_NAME(suffix=CLIENTID_SUFFIX), willflag=1, willretainflag=1)] +
+            [CONNECT_ONLY_TEST_0(clientId=randomIP.RANDOM_NAME(suffix=CLIENTID_SUFFIX), willflag=1, willretainflag=1)
+                ,
+             SUBSCRIBE_ONLY_TEST_0([f'{PUBLISH_TOPIC_SUFFIX}#'])
+             ] +
             [
                 PUBLISH_ONLY_TEST_0(
                     topic=randomIP.RANDOM_NAME(suffix=PUBLISH_TOPIC_SUFFIX, randomLen=random.randint(1, 10)),
