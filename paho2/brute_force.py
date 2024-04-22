@@ -5,6 +5,8 @@ MQTTSA PAPER:https://www.researchgate.net/publication/341563324_SlowITe_a_Novel_
 MQTTSA GITHUB:https://github.com/stfbk/mqttsa
 MQTTSA OFFICIAL WEBSITE:https://sites.google.com/fbk.eu/mqttsa/home
 """
+import datetime
+
 import paho.mqtt.client as mqtt
 import ssl
 import time
@@ -16,6 +18,9 @@ ip_target_const = CONST.IP_ADDRESS
 port_const = CONST.DST_PORT
 version_const = mqtt.CallbackAPIVersion.VERSION2 if CONST.BIG_MQTT_VERSION == 5 else mqtt.CallbackAPIVersion.VERSION1
 
+def format_datetime_now():
+    current_time = datetime.datetime.now()
+    return current_time.strftime('%Y-%m-%d %H:%M:%S')
 
 def on_connect_3(client, userdata, flags, rc):
     """
@@ -26,18 +31,22 @@ def on_connect_3(client, userdata, flags, rc):
     :param rc: the connection reason code received from the broken.
     :return:
     """
+    print('=' * 10 + f'{format_datetime_now()}' + '=' * 10)
     print(f'on_connect_3 => \nclient.connected = <{client.is_connected()}>')
     print(f'userdata = <{userdata}>')
     print(f'flags = <{flags}>')
     print(f'rc = <{rc}>')
+    print('=' * 39)
 
 
 def on_connect_5(client, userdata, flags, reason_code, properties):
+    print('=' * 10 + f'{format_datetime_now()}' + '=' * 10)
     print(f'on_connect_5 => \nclient.connected = <{client.is_connected()}>')
     print(f'userdata = <{userdata}>')
     print(f'flags = <{flags}>')
     print(f'reason_code = <{reason_code}>')
     print(f'properties = <{properties}>')
+    print('=' * 39)
 
 
 def brute_force(
@@ -55,7 +64,7 @@ def brute_force(
 
                 client.on_connect = on_connect_5 if version == mqtt.CallbackAPIVersion.VERSION2 else on_connect_3
                 client.username_pw_set(username=username, password=password)
-                print('client.username_pw_set trying: ' + username + ', ' + password)
+                print(f'client.username_pw_set trying: \n\tusername=<{username}>-password=<{password}>')
 
                 if tls_cert is not None:
                     client.tls_set(tls_cert, client_cert, client_key, cert_reqs=ssl.CERT_NONE,
@@ -63,7 +72,7 @@ def brute_force(
                     client.tls_insecure_set(True)
                 client.connect(ip_target, port)
                 client.loop_start()
-                time.sleep(1)
+                time.sleep(2)
                 if client.is_connected():
                     client.disconnect()
                     return [True, password]

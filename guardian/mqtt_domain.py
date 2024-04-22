@@ -18,7 +18,7 @@ ERROR_MESSAGE = {
 
 class MQTTPackage:
 
-    def __init__(self, packet) -> None:
+    def __init__(self, packet, decode_flag=True) -> None:
         """
         有点假设一次tcp报文中只有一次mqtt信息
         实际上可能不止如此
@@ -70,13 +70,13 @@ class MQTTPackage:
             if get_mqtt_out.payload.haslayer(MQTT):
                 self.suspect += 1
                 self.subPackageFlag = True
-                self.subPackage = MQTTPackage(get_mqtt_out.payload[MQTT])
+                self.subPackage = MQTTPackage(get_mqtt_out.payload[MQTT], decode_flag=decode_flag)
             if self.type == 1:
-                self.subMQTTPackage = MQTTConnect(get_mqtt_out.payload)
+                self.subMQTTPackage = MQTTConnect(get_mqtt_out.payload,decode_flag=decode_flag)
             elif self.type == 2:
                 self.subMQTTPackage = MQTTConnectAck(get_mqtt_out.payload, version=GLOBAL_VERSION)
             elif self.type == 3:
-                self.subMQTTPackage = MQTTPublish(get_mqtt_out.payload, version=GLOBAL_VERSION, qos=self.qos)
+                self.subMQTTPackage = MQTTPublish(get_mqtt_out.payload, version=GLOBAL_VERSION, qos=self.qos,decode_flag=decode_flag)
             elif self.type == 4:
                 self.subMQTTPackage = MQTTPublishAck(get_mqtt_out.payload, version=GLOBAL_VERSION)
             elif self.type == 5:
@@ -86,11 +86,11 @@ class MQTTPackage:
             elif self.type == 7:
                 self.subMQTTPackage = MQTTComplete(get_mqtt_out.payload, version=GLOBAL_VERSION)
             elif self.type == 8:
-                self.subMQTTPackage = MQTTSubscribe(get_mqtt_out.payload, version=GLOBAL_VERSION)
+                self.subMQTTPackage = MQTTSubscribe(get_mqtt_out.payload, version=GLOBAL_VERSION,decode_flag=decode_flag)
             elif self.type == 9:
                 self.subMQTTPackage = MQTTSubscribeAck(get_mqtt_out.payload, version=GLOBAL_VERSION)
             elif self.type == 10:
-                self.subMQTTPackage = MQTTUnsubscribe(get_mqtt_out.payload, version=GLOBAL_VERSION)
+                self.subMQTTPackage = MQTTUnsubscribe(get_mqtt_out.payload, version=GLOBAL_VERSION,decode_flag=decode_flag)
             elif self.type == 11:
                 self.subMQTTPackage = MQTTUnsubscribeAck(get_mqtt_out.payload, version=GLOBAL_VERSION)
             elif self.type == 12:
@@ -119,7 +119,7 @@ class MQTTPackage:
 
 
 class MQTTConnect:
-    def __init__(self, packet) -> None:
+    def __init__(self, packet, decode_flag=True) -> None:
         """
         we must promise "packet" has MQTTConnect layer else we raise Exception
         :param packet: MQTTConnect
@@ -165,8 +165,11 @@ class MQTTConnect:
                     raise Exception(ERROR_MESSAGE.get(0))
                 self.clientId = temp_hexstrlist[
                                 9 + self.propertiesLength + self.protocolNameLength:9 + self.propertiesLength + self.protocolNameLength + self.clientIdLength]
-                self.clientIdWords = codecs.decode("".join(self.clientId), "hex")
-                self.clientIdWords = codecs.decode(self.clientIdWords, "utf-8")
+                if decode_flag:
+                    self.clientIdWords = codecs.decode("".join(self.clientId), "hex")
+                    self.clientIdWords = codecs.decode(self.clientIdWords, "utf-8")
+                else:
+                    self.clientIdWords = ''
                 self.willPropertiesLength = 0
                 self.willBackupLength0 = 0
                 self.willBackupLength1 = 0
@@ -206,8 +209,11 @@ class MQTTConnect:
                                      :
                                      9 + self.willBackupLength0 + self.willBackupLength1 + self.propertiesLength + self.protocolNameLength + self.clientIdLength + self.willPropertiesLength + self.willTopicLength
                                      ]
-                    self.willTopicWords = codecs.decode("".join(self.willTopic), "hex")
-                    self.willTopicWords = codecs.decode(self.willTopicWords, "utf-8")
+                    if decode_flag:
+                        self.willTopicWords = codecs.decode("".join(self.willTopic), "hex")
+                        self.willTopicWords = codecs.decode(self.willTopicWords, "utf-8")
+                    else:
+                        self.willTopicWords = ''
                     self.willMessageLength = hexToInt(
                         temp_hexstrlist[
                         9 + self.willBackupLength0 + self.willBackupLength1 + self.propertiesLength + self.protocolNameLength + self.clientIdLength + self.willPropertiesLength + self.willTopicLength
@@ -220,8 +226,11 @@ class MQTTConnect:
                                        :
                                        9 + self.willBackupLength0 + self.willBackupLength1 + self.willBackupLength2 + self.propertiesLength + self.protocolNameLength + self.clientIdLength + self.willPropertiesLength + self.willTopicLength + self.willMessageLength
                                        ]
-                    self.willMessageWords = codecs.decode("".join(self.willMessage), "hex")
-                    self.willMessageWords = codecs.decode(self.willMessageWords, "utf-8")
+                    if decode_flag:
+                        self.willMessageWords = codecs.decode("".join(self.willMessage), "hex")
+                        self.willMessageWords = codecs.decode(self.willMessageWords, "utf-8")
+                    else:
+                        self.willMessageWords = ''
                 if self.usernameflag == 1:
                     self.userNameBackupLength = 2
                     self.userNameLength = hexToInt(
@@ -234,8 +243,11 @@ class MQTTConnect:
                     self.userName = temp_hexstrlist[
                         9 + self.userNameBackupLength + self.willBackupLength0 + self.willBackupLength1 + self.willBackupLength2 + self.propertiesLength + self.protocolNameLength + self.clientIdLength + self.willPropertiesLength + self.willTopicLength + self.willMessageLength + self.userNameLength
                         ]
-                    self.userNameWords = codecs.decode("".join(self.userName), "hex")
-                    self.userNameWords = codecs.decode(self.userNameWords, "utf-8")
+                    if decode_flag:
+                        self.userNameWords = codecs.decode("".join(self.userName), "hex")
+                        self.userNameWords = codecs.decode(self.userNameWords, "utf-8")
+                    else:
+                        self.userNameWords = ''
                 if self.passwordflag == 1:
                     self.passwordBackupLength = 2
                     self.passwordLength = hexToInt(
@@ -250,8 +262,11 @@ class MQTTConnect:
                                     :
                                     9 + self.passwordBackupLength + self.userNameBackupLength + self.willBackupLength0 + self.willBackupLength1 + self.willBackupLength2 + self.propertiesLength + self.protocolNameLength + self.clientIdLength + self.willPropertiesLength + self.willTopicLength + self.willMessageLength + self.userNameLength + self.passwordLength
                                     ]
-                    self.passwordWords = codecs.decode("".join(self.password), "hex")
-                    self.passwordWords = codecs.decode(self.passwordWords, "utf-8")
+                    if decode_flag:
+                        self.passwordWords = codecs.decode("".join(self.password), "hex")
+                        self.passwordWords = codecs.decode(self.passwordWords, "utf-8")
+                    else:
+                        self.passwordWords = ''
 
             else:
                 if self.passwordflag is not None and self.passwordflag == 1:
@@ -281,7 +296,7 @@ class MQTTConnect:
 
 
 class MQTTSubscribe:
-    def __init__(self, packet, version=5) -> None:
+    def __init__(self, packet, version=5, decode_flag=True) -> None:
         """
         we must promise "packet" has MQTTSubscribe layer else we raise Exception
         remember scapy cannot deal with mqtt5 subscribe
@@ -299,9 +314,12 @@ class MQTTSubscribe:
             self.properties = temp_hexstrlist[3:3 + self.propertiesLength]
             self.topicLength = hexToInt(temp_hexstrlist[3 + self.propertiesLength:5 + self.propertiesLength])
             self.topic = temp_hexstrlist[5 + self.propertiesLength:5 + self.propertiesLength + self.topicLength]
-            self.topicWords = codecs.decode("".join(self.topic), "hex")
-            self.topicWords = codecs.decode(self.topicWords, "utf-8")
             self.subscriptionOptions = temp_hexstrlist[5 + self.propertiesLength + self.topicLength:]
+            if decode_flag:
+                self.topicWords = codecs.decode("".join(self.topic), "hex")
+                self.topicWords = codecs.decode(self.topicWords, "utf-8")
+            else:
+                self.topicWords = ''
         else:
             self.msgid = packet.msgid
             self.topics = packet.topics
@@ -371,7 +389,7 @@ class MQTTSubscribeAck:
 
 class MQTTPublish:
 
-    def __init__(self, packet, version=5, qos=0) -> None:
+    def __init__(self, packet, version=5, qos=0, decode_flag=True) -> None:
         self.time = packet.time
         self.original = packet.original
         self.version = version
@@ -388,10 +406,14 @@ class MQTTPublish:
             self.message = temp_hexstrlist[
                            3 + self.topicLength + self.msgid_len + self.propertiesLength:
                            ]
-            self.topicWords = codecs.decode("".join(self.topic), "hex")
-            self.topicWords = codecs.decode(self.topicWords, "utf-8")
-            self.messageWords = codecs.decode("".join(self.message), "hex")
-            self.messageWords = codecs.decode(self.messageWords, "utf-8")
+            if decode_flag:
+                self.topicWords = codecs.decode("".join(self.topic), "hex")
+                self.topicWords = codecs.decode(self.topicWords, "utf-8")
+                self.messageWords = codecs.decode("".join(self.message), "hex")
+                self.messageWords = codecs.decode(self.messageWords, "utf-8")
+            else:
+                self.topicWords = ''
+                self.messageWords = ''
 
         else:
             self.length = packet.length
@@ -524,7 +546,7 @@ class MQTTComplete:
 
 
 class MQTTUnsubscribe:
-    def __init__(self, packet, version=5) -> None:
+    def __init__(self, packet, version=5, decode_flag=True) -> None:
         """
         we must promise "packet" has MQTTUnsubscribe layer else we raise Exception
         :param packet: MQTTUnsubscribe
@@ -539,8 +561,11 @@ class MQTTUnsubscribe:
             self.properties = temp_hexstrlist[3:3 + self.propertiesLength]
             self.topicLength = hexToInt(temp_hexstrlist[3 + self.propertiesLength:5 + self.propertiesLength])
             self.topic = temp_hexstrlist[5 + self.propertiesLength:5 + self.propertiesLength + self.topicLength]
-            self.topicWords = codecs.decode("".join(self.topic), "hex")
-            self.topicWords = codecs.decode(self.topicWords, "utf-8")
+            if decode_flag:
+                self.topicWords = codecs.decode("".join(self.topic), "hex")
+                self.topicWords = codecs.decode(self.topicWords, "utf-8")
+            else:
+                self.topicWords = ''
         else:
             self.msgid = packet.msgid
             self.topics = packet.topics

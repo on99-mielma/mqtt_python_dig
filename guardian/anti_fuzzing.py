@@ -219,7 +219,7 @@ def show_mqtt_package(packet: Packet):
     global GLOBAL_BLOCK_JSON, GLOBAL_BLOCK_IP_SET, GLOBAL_BLOCK_TCPIP_SET
     global SUSPECT_COUNT
     if packet.haslayer(MQTT):
-        package = GMD.MQTTPackage(packet=packet)
+        package = GMD.MQTTPackage(packet=packet,decode_flag=False)
         if package.source_union in GLOBAL_BLOCK_IP_SET or package.source_union in GLOBAL_BLOCK_TCPIP_SET:
             logging.info(
                 msg=f'{ERROR_MESSAGE.get(16)}'
