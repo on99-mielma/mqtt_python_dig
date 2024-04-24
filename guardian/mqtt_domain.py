@@ -29,18 +29,25 @@ class MQTTPackage:
 
             self.suspect = 0
             get_mqtt_out = packet[MQTT]
-            if packet.haslayer(IP):
+            if packet.haslayer(IP) or packet.haslayer('IP'):
                 self.source_ip = packet[IP].src
                 self.destination_ip = packet[IP].dst
+                if self.source_ip is None:
+                    self.source_ip = packet['IP'].src
+                if self.destination_ip is None:
+                    self.destination_ip = packet['IP'].dst
             else:
                 self.suspect += 1
                 if decode_flag:
                     raise Exception(ERROR_MESSAGE.get(3))
 
-
-            if packet.haslayer(TCP):
+            if packet.haslayer(TCP) or packet.haslayer('TCP'):
                 self.source_port = packet[TCP].sport
                 self.destination_port = packet[TCP].dport
+                if self.source_port is None:
+                    self.source_port = packet['TCP'].sport
+                if self.destination_port is None:
+                    self.destination_port = packet['TCP'].dport
             else:
                 self.suspect += 1
                 if decode_flag:
@@ -50,12 +57,14 @@ class MQTTPackage:
                 self.source_union = ':'.join([self.source_ip, str(self.source_port)])
                 self.source_union = self.source_union.strip()
             else:
+                self.source_union = 'ERROR SOURCE'
                 raise Exception(ERROR_MESSAGE.get(5))
 
             if self.destination_ip is not None and self.destination_port is not None:
                 self.destination_union = ':'.join([self.destination_ip, str(self.destination_port)])
                 self.destination_union = self.destination_union.strip()
             else:
+                self.destination_union = 'ERROR DESTINATION'
                 raise Exception(ERROR_MESSAGE.get(5))
 
             if get_mqtt_out.payload is None:
@@ -73,13 +82,14 @@ class MQTTPackage:
             if get_mqtt_out.payload.haslayer(MQTT):
                 self.suspect += 1
                 self.subPackageFlag = True
-                self.subPackage = MQTTPackage(get_mqtt_out.payload[MQTT], decode_flag=decode_flag)
+                # self.subPackage = MQTTPackage(get_mqtt_out.payload[MQTT], decode_flag=decode_flag)
             if self.type == 1:
-                self.subMQTTPackage = MQTTConnect(get_mqtt_out.payload,decode_flag=decode_flag)
+                self.subMQTTPackage = MQTTConnect(get_mqtt_out.payload, decode_flag=decode_flag)
             elif self.type == 2:
                 self.subMQTTPackage = MQTTConnectAck(get_mqtt_out.payload, version=GLOBAL_VERSION)
             elif self.type == 3:
-                self.subMQTTPackage = MQTTPublish(get_mqtt_out.payload, version=GLOBAL_VERSION, qos=self.qos,decode_flag=decode_flag)
+                self.subMQTTPackage = MQTTPublish(get_mqtt_out.payload, version=GLOBAL_VERSION, qos=self.qos,
+                                                  decode_flag=decode_flag)
             elif self.type == 4:
                 self.subMQTTPackage = MQTTPublishAck(get_mqtt_out.payload, version=GLOBAL_VERSION)
             elif self.type == 5:
@@ -89,11 +99,13 @@ class MQTTPackage:
             elif self.type == 7:
                 self.subMQTTPackage = MQTTComplete(get_mqtt_out.payload, version=GLOBAL_VERSION)
             elif self.type == 8:
-                self.subMQTTPackage = MQTTSubscribe(get_mqtt_out.payload, version=GLOBAL_VERSION,decode_flag=decode_flag)
+                self.subMQTTPackage = MQTTSubscribe(get_mqtt_out.payload, version=GLOBAL_VERSION,
+                                                    decode_flag=decode_flag)
             elif self.type == 9:
                 self.subMQTTPackage = MQTTSubscribeAck(get_mqtt_out.payload, version=GLOBAL_VERSION)
             elif self.type == 10:
-                self.subMQTTPackage = MQTTUnsubscribe(get_mqtt_out.payload, version=GLOBAL_VERSION,decode_flag=decode_flag)
+                self.subMQTTPackage = MQTTUnsubscribe(get_mqtt_out.payload, version=GLOBAL_VERSION,
+                                                      decode_flag=decode_flag)
             elif self.type == 11:
                 self.subMQTTPackage = MQTTUnsubscribeAck(get_mqtt_out.payload, version=GLOBAL_VERSION)
             elif self.type == 12:
