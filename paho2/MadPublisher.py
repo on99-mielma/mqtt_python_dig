@@ -40,13 +40,13 @@ def publish_callback_3(client, userdata, mid):
 
 
 def gen_messages_tuple(topic_suffix, msgs_len=800, retain_flag=False):
-    msgs_list = []
+    msgs_list = [('', '', 0, retain_flag)] * msgs_len
     for i in range(msgs_len):
         topic = randomIP.RANDOM_NAME(suffix=topic_suffix, randomLen=4)
         message = randomIP.RANDOM_JSON(key_len=random.randint(1, 4))
         qos = random.randint(0, 2)
         retain = retain_flag
-        msgs_list.append((topic, message, qos, retain))
+        msgs_list[i] = (topic, message, qos, retain)
     logging.debug(
         msg=f'messages_list = <{msgs_list}>'
     )
@@ -133,4 +133,4 @@ def show_mad_lion(broker, port, api_version, ezflag):
 
 
 if __name__ == '__main__':
-    show_mad_lion(BROKER, PORT, API_VERSION, True)
+    show_mad_lion(BROKER, PORT, API_VERSION, False)
