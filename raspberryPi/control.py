@@ -97,7 +97,7 @@ def message_callback(client, userdata, message):
     mp = {}
     if data is None:
         pass
-    elif data == 404:
+    elif data >= 600:
         mp['state'] = 0
         json_data = json.dumps(mp)
         client.publish(topic=DOWN_TOPIC, payload=json_data, qos=userdata.get('qos', 0), retain=False)

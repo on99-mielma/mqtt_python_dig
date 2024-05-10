@@ -1,4 +1,4 @@
-IP_ADDRESS = '192.168.31.244'
+IP_ADDRESS = '192.168.31.70'
 DST_PORT = 1883
 INTERFACE = "Realtek PCIe 2.5GbE Family Controller"
 SUBSCRIBE_TOPIC = 'test/#'
