@@ -435,7 +435,7 @@ def bytes_to_packet(data, before_package_length):
     eth_pkt = Ether(bytes(data))
     # mqtt_len = len(eth_pkt[TCP].payload)
     if eth_pkt.haslayer('TCP'):
-        eth_pkt[TCP].ack += (before_package_length + 0)
+        # eth_pkt[TCP].ack = (before_package_length + 0)
         eth_pkt[TCP].seq += (before_package_length + 0)
     package = eth_pkt
     if IP in eth_pkt:
