@@ -53,13 +53,25 @@ def gen_messages_tuple(topic_suffix, msgs_len=800, retain_flag=False):
     return msgs_list
 
 
-def run_with_client(topic_suffix, api_version, target_broker, target_port, msgs_len=100, retain_flag=False):
+def gen_mad_client(api_version, target_broker, target_port):
     unacked_publish = set()
     mqtt_client = mqtt.Client(callback_api_version=api_version, client_id=randomIP.RANDOM_NAME(), clean_session=True)
     mqtt_client.on_publish = publish_callback_5 if api_version == mqtt.CallbackAPIVersion.VERSION2 else publish_callback_3
     mqtt_client.user_data_set(unacked_publish)
     mqtt_client.connect(host=target_broker, port=target_port)
     mqtt_client.subscribe(topic=TOPIC_SUFFIX + '#')
+    return mqtt_client
+
+
+def run_with_client(topic_suffix, mqtt_client: mqtt.Client, msgs_len=100, retain_flag=False):
+    # unacked_publish = set()
+    # mqtt_client = mqtt.Client(callback_api_version=api_version, client_id=randomIP.RANDOM_NAME(), clean_session=True)
+    # mqtt_client.on_publish = publish_callback_5 if api_version == mqtt.CallbackAPIVersion.VERSION2 else publish_callback_3
+    # mqtt_client.user_data_set(unacked_publish)
+    # mqtt_client.connect(host=target_broker, port=target_port)
+    # mqtt_client.subscribe(topic=TOPIC_SUFFIX + '#')
+    mqtt_client.user_data_set(set())
+    unacked_publish = mqtt_client.user_data_get()
     mqtt_client.loop_start()
     msg_deque = deque()
     for _ in range(msgs_len):
@@ -78,7 +90,7 @@ def run_with_client(topic_suffix, api_version, target_broker, target_port, msgs_
             nowlen = len(unacked_publish)
         time.sleep(0.1)
     if mqtt_client.is_connected():
-        mqtt_client.disconnect()
+        # mqtt_client.disconnect()
         mqtt_client.loop_stop()
     return len(unacked_publish)
 
@@ -89,47 +101,51 @@ def mad_lion(target_broker, target_port, api_version, ez_flag=True):
     )
     start_time = time.time()
     if ez_flag:
-        msgs = gen_messages_tuple(topic_suffix=TOPIC_SUFFIX)
-        logging.info(
-            msg=f'GENERATED <{len(msgs)}> MESSAGES, PUBLISH START SOON'
-        )
-        publish.multiple(
-            msgs=msgs,
-            hostname=target_broker,
-            protocol=MQTTProtocolVersion.MQTTv5 if api_version == mqtt.CallbackAPIVersion.VERSION2 else MQTTProtocolVersion.MQTTv311,
-            port=target_port,
-            client_id=randomIP.RANDOM_NAME()
-        )
-        end_time = time.time()
-        logging.info(
-            msg=f'PUBLISHED <{len(msgs)}> MESSAGES, COST <{end_time - start_time}> SECONDS'
-        )
+        while True:
+            msgs = gen_messages_tuple(topic_suffix=TOPIC_SUFFIX)
+            logging.info(
+                msg=f'GENERATED <{len(msgs)}> MESSAGES, PUBLISH START SOON'
+            )
+            publish.multiple(
+                msgs=msgs,
+                hostname=target_broker,
+                protocol=MQTTProtocolVersion.MQTTv5 if api_version == mqtt.CallbackAPIVersion.VERSION2 else MQTTProtocolVersion.MQTTv311,
+                port=target_port,
+                client_id=randomIP.RANDOM_NAME()
+            )
+            end_time = time.time()
+            logging.info(
+                msg=f'PUBLISHED <{len(msgs)}> MESSAGES, COST <{end_time - start_time}> SECONDS'
+            )
     else:
         MSG_LEN = 1000
         logging.info(
             msg=f'GENERATED <{MSG_LEN}> MESSAGES, PUBLISH START SOON'
         )
-        left_len = run_with_client(
-            topic_suffix=TOPIC_SUFFIX,
+        mad_client = gen_mad_client(
             api_version=api_version,
             target_broker=target_broker,
-            target_port=target_port,
-            msgs_len=MSG_LEN
+            target_port=target_port
         )
-        end_time = time.time()
-        logging.info(
-            msg=f'PUBLISHED <{MSG_LEN - left_len}> MESSAGES, COST <{end_time - start_time}> SECONDS'
-        )
+        while True:
+            left_len = run_with_client(
+                topic_suffix=TOPIC_SUFFIX,
+                mqtt_client=mad_client,
+                msgs_len=MSG_LEN
+            )
+            end_time = time.time()
+            logging.info(
+                msg=f'PUBLISHED <{MSG_LEN - left_len}> MESSAGES, COST <{end_time - start_time}> SECONDS'
+            )
 
 
 def show_mad_lion(broker, port, api_version, ezflag):
-    while True:
-        mad_lion(
-            target_broker=broker,
-            target_port=port,
-            api_version=api_version,
-            ez_flag=ezflag
-        )
+    mad_lion(
+        target_broker=broker,
+        target_port=port,
+        api_version=api_version,
+        ez_flag=ezflag
+    )
 
 
 if __name__ == '__main__':
